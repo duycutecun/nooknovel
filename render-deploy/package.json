@@ -1,0 +1,42 @@
+{
+  "name": "fliphtml5-gemini-translator",
+  "version": "1.0.0",
+  "description": "Local Electron desktop app that scrapes FlipHTML5 text, translates it through Gemini Web automation, and displays the Vietnamese result in a reader view.",
+  "main": "main.js",
+  "author": "Local",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.10.2"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.local.fliphtml5geminitranslator",
+    "productName": "FlipHTML5 Gemini Translator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

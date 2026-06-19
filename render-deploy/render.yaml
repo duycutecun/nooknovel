@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nooknovel-server
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    port: 3000
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FIREBASE_DB_URL
+        value: https://nooknovel-7b5a1-default-rtdb.asia-southeast1.firebasedatabase.app
+      - key: DATA_DIR
+        value: /opt/render/project/src/data

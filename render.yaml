@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: nooknovel-server
+    env: node
+    buildCommand: npm install
+    startCommand: node server/index.js
+    port: 3000
+    envVars:
+      - key: NODE_ENV
+        value: production

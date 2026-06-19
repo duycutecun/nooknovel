@@ -1,0 +1,12 @@
+﻿node_modules/
+dist/
+*.zip
+*.exe
+*.app
+*.dmg
+.DS_Store
+.env.local
+*.log
+outputs/
+work/
+.firebase/

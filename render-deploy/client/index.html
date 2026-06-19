@@ -1,0 +1,5319 @@
+﻿<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Novel Nook Translator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fbf2df;
+      --paper-2: #f4e4c7;
+      --ink: #2b2117;
+      --muted: #796b5d;
+      --line: #dec9a8;
+      --brand: #9b6a3a;
+      --brand-2: #c68d52;
+      --green: #5f8a62;
+      --danger: #b74d4d;
+      --tablet: #171717;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: 0;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255,255,255,.32), transparent 26%),
+        linear-gradient(135deg, #b9906e, #e5d3b9 48%, #8a6d56);
+    }
+
+    button, input, select, textarea {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .screen {
+      height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+    }
+
+    .tablet {
+      width: min(1180px, 96vw);
+      height: min(760px, 92vh);
+      background: var(--tablet);
+      border-radius: 34px;
+      padding: 18px;
+      box-shadow: 0 28px 70px rgba(0,0,0,.38);
+      border: 2px solid rgba(255,255,255,.18);
+    }
+
+    .tablet-inner {
+      height: 100%;
+      overflow: hidden;
+      border-radius: 20px;
+      background: var(--paper);
+      display: grid;
+      grid-template-rows: 66px minmax(0, 1fr) 62px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 52px 1fr 52px;
+      align-items: center;
+      padding: 0 28px;
+      border-bottom: 1px solid rgba(124, 89, 52, .16);
+      background: rgba(255, 248, 232, .84);
+    }
+
+    .profile {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d3995a, #5f3826);
+      color: #fff8e8;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      border: 2px solid #fff;
+    }
+
+    .logo {
+      text-align: center;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: .04em;
+      color: #6f4829;
+      text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff;
+    }
+
+    .logo span {
+      color: #5f8a62;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(124, 89, 52, .2);
+      border-radius: 50%;
+      background: #fff5df;
+      color: var(--ink);
+      font-size: 18px;
+      display: grid;
+      place-items: center;
+    }
+
+    .profile {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d3995a, #5f3826);
+      color: #fff8e8;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      border: 2px solid #fff;
+      cursor: pointer;
+    }
+
+    /* ── Carbee-style Auth Modal ── */
+    @keyframes authOverlayIn { from{opacity:0} to{opacity:1} }
+    @keyframes authCardUp {
+      from { opacity:0; transform: translateY(32px) scale(0.96); }
+      to   { opacity:1; transform: translateY(0)   scale(1);    }
+    }
+
+    .auth-modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(220, 225, 238, 0.72);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 999;
+      padding: 20px;
+      animation: authOverlayIn 0.22s ease;
+    }
+
+    .auth-modal-overlay.hidden { display: none; }
+
+    /* Card */
+    .auth-modal {
+      position: relative;
+      width: min(400px, 100%);
+      background: #ffffff;
+      border-radius: 32px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.04), 0 20px 48px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.05);
+      overflow: hidden;
+      animation: authCardUp 0.32s cubic-bezier(0.22,1,0.36,1);
+      font-family: inherit;
+    }
+    .auth-modal, .auth-modal * { font-family: inherit !important; }
+
+    /* Close button */
+    .auth-modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: #f0f1f3;
+      color: #999;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+      z-index: 10;
+    }
+    .auth-modal-close:hover { background: #e2e4e8; color: #444; transform: none; }
+
+    /* Sign-in content wrapper */
+    .auth-modal-content { display: block; }
+
+    /* Logo section */
+    .auth-logo-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 44px 32px 0;
+    }
+    .auth-logo-icon-box {
+      width: 76px; height: 76px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #f5c842, #e8a020);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem; line-height: 1;
+      box-shadow: 0 8px 24px rgba(232,160,32,0.38), 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .auth-logo-name {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+    }
+    .auth-logo-sub { font-size: 0.85rem; color: #aaa; margin-top: -2px; }
+
+    /* Tab row */
+    .auth-tab-row {
+      display: flex;
+      background: #f0f1f3;
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      margin: 20px 32px 0;
+    }
+    .auth-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 9px;
+      padding: 9px 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #aaa;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .auth-tab:hover { background: rgba(255,255,255,0.65); color: #555; transform: none; }
+    .auth-tab.active { background: #fff; color: #1a1a1a; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+
+    /* Title */
+    .auth-modal-header {
+      padding: 16px 32px 0;
+      margin: 0;
+    }
+    .auth-modal-header .banner-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      margin: 0 0 4px;
+      text-transform: none;
+    }
+    .auth-modal-header .status {
+      display: none;
+    }
+
+    /* Panel area */
+    .auth-panel {
+      padding: 20px 32px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Primary Google CTA */
+    .auth-google-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 15px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #f5c842, #e8a020);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(232,160,32,0.38);
+      transition: transform .15s, box-shadow .15s, filter .15s;
+    }
+    .auth-google-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(232,160,32,0.5);
+      filter: brightness(1.04);
+    }
+    .google-icon {
+      width: 24px; height: 24px;
+      background: #fff;
+      border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    /* Switch text */
+    .auth-switch-row {
+      font-size: 0.86rem;
+      color: #999;
+      text-align: center;
+    }
+
+    /* Divider */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: #eee;
+    }
+
+    /* Email/password inputs */
+    .auth-form { display: grid; gap: 12px; }
+    .auth-form input, #authEmailInput, #authPasswordInput {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1.5px solid #e8e8e8;
+      background: #fafafa;
+      color: #1a1a1a;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      box-sizing: border-box;
+    }
+    .auth-form input:focus, #authEmailInput:focus, #authPasswordInput:focus {
+      border-color: #e8a020;
+      box-shadow: 0 0 0 3px rgba(232,160,32,0.15);
+      background: #fff;
+    }
+    .auth-form input::placeholder, #authEmailInput::placeholder, #authPasswordInput::placeholder {
+      color: #bbb;
+    }
+
+    /* Password row */
+    .password-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .password-row .forgot-link {
+      align-self: flex-end;
+      color: #e8a020;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .password-row .forgot-link:hover { text-decoration: underline; }
+
+    /* Submit button */
+    .auth-submit {
+      width: 100%;
+      padding: 15px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #f5c842, #e8a020);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(232,160,32,0.38);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .auth-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(232,160,32,0.5); }
+
+    /* Meta row */
+    .auth-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: #999;
+    }
+    .remember-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: #999; cursor: pointer;
+    }
+    .remember-row input { width: auto; accent-color: #e8a020; }
+    .register-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: #999;
+    }
+    .register-link {
+      background: #e8a020;
+      color: #fff !important;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .register-link:hover { background: #c07810; transform: none; }
+
+    /* Warning / message */
+    .auth-warning {
+      font-size: 0.85rem;
+      color: #888;
+      background: #f7f7f7;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 10px 14px;
+      line-height: 1.5;
+    }
+
+    /* Logged-in user info */
+    .auth-info-row {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f7f7f7;
+      border: 1px solid #eee;
+      color: #1a1a1a;
+      font-size: 0.9rem;
+    }
+
+    /* Sign out button */
+    .auth-button.secondary {
+      width: 100%;
+      padding: 13px;
+      border-radius: 14px;
+      border: 1.5px solid #f0d0d0;
+      background: transparent;
+      color: #cc4444;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background .15s, border-color .15s;
+    }
+    .auth-button.secondary:hover { background: rgba(200,60,60,0.06); border-color: #e08888; transform: none; }
+
+    /* Admin panel */
+    .auth-admin-panel {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid #eee;
+      background: #fafafa;
+    }
+    .admin-panel-title { margin-bottom: 10px; font-weight: 700; color: #333; font-size: 0.9rem; }
+    .admin-panel-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+    .admin-user-list { display: grid; gap: 8px; max-height: 240px; overflow-y: auto; }
+    .admin-user-row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; padding: 10px 12px;
+      border-radius: 12px; background: #fff; border: 1px solid #eee;
+      color: #333; font-size: 0.88rem;
+    }
+    .admin-user-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .admin-delete-user {
+      padding: 6px 12px; border-radius: 999px;
+      border: none; background: #f44336; color: #fff; cursor: pointer; font-size: 0.82rem;
+    }
+    .admin-delete-user:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Legal text */
+    .auth-legal-text {
+      font-size: 0.76rem;
+      color: #ccc;
+      text-align: center;
+      line-height: 1.6;
+      margin-top: -4px;
+    }
+    .auth-legal-text a { color: #e8a020; font-weight: 600; text-decoration: none; }
+    .auth-legal-text a:hover { text-decoration: underline; }
+
+    .auth-modal {
+      position: relative;
+      width: min(520px, 100%);
+      background: linear-gradient(180deg, rgba(25, 26, 47, 0.98), rgba(16, 17, 33, 0.99));
+      border-radius: 32px;
+      padding: 28px 28px 22px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+      color: #fff;
+      overflow: hidden;
+      font-family: "Times New Roman", Times, serif !important;
+    }
+
+    .auth-modal,
+    .auth-modal * {
+      font-family: "Times New Roman", Times, serif !important;
+    }
+
+    .auth-modal::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 32px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 30%);
+      pointer-events: none;
+    }
+
+    .auth-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 22px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-modal-header .banner-title {
+      font-size: 2rem;
+      letter-spacing: 0.02em;
+      margin: 0 0 6px;
+      color: #ffffff;
+      text-transform: none;
+    }
+
+    .auth-modal-header .status {
+      margin: 0;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .auth-modal-close {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background .2s ease, transform .2s ease;
+    }
+
+    .auth-modal-close:hover {
+      background: rgba(255,255,255,0.16);
+      transform: translateY(-1px);
+    }
+
+    .auth-modal-content {
+      display: grid;
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-tab-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 6px;
+    }
+
+    .auth-tab {
+      border: none;
+      border-radius: 18px;
+      background: transparent;
+      color: rgba(255,255,255,0.72);
+      padding: 14px 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .auth-tab.active {
+      background: rgba(255,255,255,0.14);
+      color: #ffffff;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+      transform: translateY(-1px);
+    }
+
+    .auth-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .auth-google-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 15px 18px;
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: #ffffff;
+      color: #1f1f1f;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .auth-google-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+    }
+
+    .google-icon {
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255,255,255,0.65);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.14);
+    }
+
+    .auth-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .auth-form input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .auth-form input::placeholder {
+      color: rgba(255,255,255,0.68);
+    }
+
+    .auth-form input:focus {
+      outline: none;
+      border-color: rgba(255,255,255,0.34);
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .password-row {
+      display: grid;
+      gap: 12px;
+      position: relative;
+    }
+
+    .password-row .forgot-link {
+      justify-self: end;
+      color: #ffb6d6;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .auth-submit {
+      width: 100%;
+      padding: 16px 18px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff6c8c, #ff956b);
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .auth-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 30px rgba(255, 108, 140, 0.28);
+    }
+
+    .auth-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.95rem;
+      margin-top: 2px;
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
+    }
+
+    .remember-row input {
+      width: auto;
+      accent-color: #ff8aa4;
+    }
+
+    .register-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.75);
+      font-size: 0.95rem;
+    }
+
+    .register-row .register-link {
+      color: #242423;
+      background: #ffdd56;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+    }
+
+    .auth-warning {
+      color: #f8e3c9;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 12px 14px;
+    }
+
+    .auth-info-row {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    .auth-button.secondary {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .auth-button.secondary:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+        .auth-admin-panel {
+          margin-top: 18px;
+          padding: 14px;
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.04);
+        }
+
+        .admin-panel-title {
+          margin-bottom: 12px;
+          font-weight: 700;
+          color: #fff;
+          font-size: 0.95rem;
+        }
+
+        .admin-user-list {
+          display: grid;
+          gap: 10px;
+          max-height: 260px;
+          overflow-y: auto;
+        }
+
+        .admin-user-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 14px;
+          border-radius: 16px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: #fff;
+          font-size: 0.95rem;
+        }
+
+        .admin-user-row span {
+          flex: 1 1 0;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .admin-delete-user {
+          padding: 8px 14px;
+          border-radius: 999px;
+          border: none;
+          background: #f44336;
+          color: #fff;
+          cursor: pointer;
+        }
+
+        .admin-delete-user:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+      gap: 12px;
+      color: rgba(255,255,255,0.75);
+      font-size: 0.95rem;
+      margin-top: 8px;
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255,255,255,0.82);
+      font-size: 0.95rem;
+    }
+
+    .remember-row input {
+      width: auto;
+      accent-color: #ff7e92;
+    }
+
+    .register-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      color: rgba(255,255,255,0.78);
+      font-size: 0.95rem;
+    }
+
+    .register-row .register-link {
+      color: #fff;
+      background: #ffd93d;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 800;
+      text-decoration: none;
+      color: #2d1b00;
+    }
+
+    .auth-info-row {
+      display: none;
+    }
+
+    .auth-note {
+      display: none;
+    }
+
+    .auth-modal-close {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      transition: background .2s ease, transform .2s ease;
+    }
+
+    .auth-modal-close:hover {
+      background: rgba(255,255,255,0.16);
+      transform: translateY(-1px);
+    }
+
+    .content {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 34px 24px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .banner-row {
+      display: grid;
+      grid-template-columns: 1fr 1.45fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .banner {
+      position: relative;
+      min-height: 138px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #75b6ca, #e8c37f);
+      box-shadow: 0 7px 14px rgba(94, 59, 29, .18);
+      border: 1px solid rgba(255,255,255,.7);
+    }
+
+    .banner.large {
+      min-height: 156px;
+    }
+
+    .banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: .9;
+    }
+
+    .banner::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(28,23,18,.64), rgba(28,23,18,.06));
+    }
+
+    .banner-content {
+      position: absolute;
+      z-index: 1;
+      left: 18px;
+      right: 18px;
+      top: 18px;
+      color: #fff;
+    }
+
+    .banner-title {
+      font-size: 22px;
+      line-height: 1.1;
+      font-weight: 900;
+      max-width: 260px;
+    }
+
+    .banner-sub {
+      margin-top: 5px;
+      font-size: 12px;
+      opacity: .9;
+    }
+
+    .pill {
+      margin-top: 14px;
+      border: 0;
+      border-radius: 999px;
+      background: #8d5933;
+      color: #fff8ed;
+      min-height: 27px;
+      padding: 0 14px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .dots {
+      text-align: center;
+      color: #c8a16d;
+      font-size: 22px;
+      margin: 6px 0 2px;
+      line-height: 1;
+    }
+
+    .section-head {
+      margin: 18px 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+      font-weight: 920;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .continue-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .continue-card {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f7e9ce;
+      padding: 9px;
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) 34px;
+      gap: 10px;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(105, 73, 42, .12);
+      text-align: left;
+    }
+
+    .continue-card img,
+    .cover-fallback {
+      width: 56px;
+      height: 72px;
+      border-radius: 5px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #d9c3a0, #9f7650);
+      display: grid;
+      place-items: center;
+      color: #fff8ed;
+      font-size: 11px;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .continue-title {
+      font-size: 13px;
+      line-height: 1.25;
+      font-weight: 850;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .continue-meta {
+      margin-top: 5px;
+      color: #8e704f;
+      font-size: 12px;
+    }
+
+    .mini-progress {
+      margin-top: 7px;
+      height: 5px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #ead7b8;
+    }
+
+    .mini-progress span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: var(--green);
+    }
+
+    .play {
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 50%;
+      background: #9b6a3a;
+      color: #fff8ed;
+      font-size: 12px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+    }
+
+    .library-line,
+    .book-grid {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .book-grid {
+      flex-wrap: wrap;
+      overflow: visible;
+    }
+
+    .book-card {
+      flex: 0 0 92px;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      text-align: left;
+      color: var(--ink);
+    }
+
+    .book-card.active .book-cover {
+      outline: 4px solid rgba(95, 138, 98, .55);
+    }
+
+    .book-cover {
+      width: 92px;
+      height: 122px;
+      border-radius: 7px;
+      overflow: hidden;
+      box-shadow: 0 8px 14px rgba(83, 55, 31, .2);
+      background: linear-gradient(135deg, #d9c3a0, #9f7650);
+    }
+
+    .book-cover img,
+    .book-cover .cover-fallback {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    .book-name {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.18;
+      font-weight: 850;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .book-desc {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .discover-card,
+    .profile-card {
+      max-width: 760px;
+      margin: 20px auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 248, 232, .9);
+      padding: 22px;
+      box-shadow: 0 12px 28px rgba(94, 59, 29, .14);
+    }
+
+    .discover-card h2,
+    .profile-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .helper {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .control-card {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) 128px 130px;
+      gap: 10px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fffaf0;
+      padding: 9px 12px;
+      color: var(--ink);
+      outline: none;
+      font-size: 14px;
+    }
+
+    input:focus {
+      border-color: var(--brand-2);
+      box-shadow: 0 0 0 3px rgba(198, 141, 82, .18);
+    }
+
+    .action {
+      min-height: 42px;
+      border: 0;
+      border-radius: 7px;
+      color: #fffaf0;
+      background: var(--brand);
+      font-weight: 850;
+      font-size: 13px;
+    }
+
+    .action.secondary {
+      background: #fff2d6;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .action:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    .progress {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr) 48px;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .progress-track {
+      height: 7px;
+      background: #ead7b8;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-track span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: var(--green);
+      transition: width .25s ease;
+    }
+
+    .steps {
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      color: #5d5043;
+      font-size: 14px;
+    }
+
+    .steps li {
+      border: 1px solid #ead7b8;
+      border-radius: 9px;
+      background: #fffaf0;
+      padding: 11px 12px;
+    }
+
+    .bottom-nav {
+      border-top: 1px solid rgba(124, 89, 52, .18);
+      background: rgba(255, 239, 208, .92);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+    }
+
+    .bottom-nav button {
+      border: 0;
+      background: transparent;
+      height: 62px;
+      color: #6b4c31;
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .bottom-nav button.active {
+      color: var(--green);
+      background: rgba(95, 138, 98, .12);
+    }
+
+    .bottom-nav strong {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .reader-shell {
+      height: 100vh;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255,255,255,.22), transparent 28%),
+        linear-gradient(135deg, #b9906e, #e5d3b9 48%, #8a6d56);
+    }
+
+    .reader-tablet {
+      width: min(1360px, 98vw);
+      height: min(760px, 94vh);
+      background: #111;
+      border-radius: 38px;
+      padding: 16px 20px;
+      box-shadow: 0 28px 80px rgba(0,0,0,.42);
+      border: 2px solid rgba(255,255,255,.18);
+      position: relative;
+    }
+
+    .reader-inner {
+      height: 100%;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #fbf6ea;
+      display: grid;
+      grid-template-rows: 46px 56px minmax(0, 1fr);
+    }
+
+    .reader-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      color: #4d453c;
+      font-size: 13px;
+      background: #f7f0df;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .reader-toolbar {
+      display: grid;
+      grid-template-columns: 44px minmax(190px, 1fr) 320px 330px;
+      align-items: center;
+      gap: 12px;
+      padding: 0 22px;
+      border-top: 1px solid rgba(124, 89, 52, .12);
+      border-bottom: 1px solid rgba(124, 89, 52, .18);
+      background: #fcf7ec;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .back {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .reader-book-title {
+      font-size: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .page-progress {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      color: #5c5046;
+      font-size: 13px;
+    }
+
+    .slider {
+      position: relative;
+      height: 2px;
+      background: #c9b99b;
+    }
+
+    .slider::before,
+    .slider::after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #3e382f;
+    }
+
+    .slider::before {
+      left: 30%;
+    }
+
+    .slider::after {
+      left: 70%;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      color: #2d261f;
+      font-size: 15px;
+    }
+
+    .toolbar-actions button {
+      border: 0;
+      background: transparent;
+      color: #2d261f;
+      font-weight: 700;
+      padding: 4px;
+    }
+
+    .toolbar-actions button.active {
+      color: var(--green);
+    }
+
+    .toolbar-actions button.delete {
+      color: var(--danger);
+    }
+
+    .toolbar-actions button.delete {
+      color: var(--danger);
+    }
+
+    .switch {
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      background: #8c826f;
+      position: relative;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      right: 2px;
+      top: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #2f2a24;
+    }
+
+    .reading-area {
+      min-height: 0;
+      position: relative;
+      overflow: auto;
+      padding: 20px 84px 38px 104px;
+      font-family: "Times New Roman", Times, serif;
+    }
+
+    .reading-area.night {
+      background: #171717;
+      color: #ece5d6;
+    }
+
+    .reading-area.night .reader-text p,
+    .reading-area.night .chapter-title {
+      color: #ece5d6;
+    }
+
+    .chapter-title {
+      margin: 0 0 18px;
+      font-size: 27px;
+      line-height: 1.25;
+      font-weight: 500;
+    }
+
+    .reader-text {
+      max-width: 980px;
+    }
+
+    .reader-text p {
+      margin: 0 0 .76em;
+      font-size: 20px;
+      line-height: 1.56;
+      color: #241f1a;
+      font-family: "Times New Roman", Times, serif;
+    }
+
+    .reading-area.font-small .reader-text p {
+      font-size: 18px;
+    }
+
+    .reading-area.font-large .reader-text p {
+      font-size: 22px;
+    }
+
+    .chapter-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 14px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .chapter-nav button {
+      min-height: 34px;
+      border: 1px solid #d9c4a3;
+      border-radius: 8px;
+      background: #fff8e8;
+      color: var(--ink);
+      padding: 0 12px;
+      font-weight: 700;
+    }
+
+    .chapter-nav button:disabled {
+      opacity: .45;
+      cursor: default;
+    }
+
+    .reader-meta {
+      color: #796f62;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      margin-bottom: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .side-panel {
+      position: fixed;
+      right: max(34px, calc((100vw - min(1360px, 98vw)) / 2 + 42px));
+      top: 50%;
+      width: 280px;
+      max-height: min(560px, 80vh);
+      transform: translateY(-50%);
+      overflow: auto;
+      border: 1px solid rgba(124, 89, 52, .22);
+      border-radius: 16px;
+      background: rgba(255, 250, 241, .98);
+      box-shadow: 0 18px 38px rgba(60, 42, 28, .22);
+      padding: 16px;
+      z-index: 5;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .side-panel h3 {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+
+    .panel-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .panel-list button {
+      min-height: 38px;
+      border: 1px solid #ead7b8;
+      border-radius: 8px;
+      background: #fffaf0;
+      color: var(--ink);
+      text-align: left;
+      padding: 8px 10px;
+    }
+
+    .panel-list button.active {
+      border-color: var(--green);
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .book-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .book-actions button {
+      min-height: 24px;
+      border: 1px solid #d9c4a3;
+      border-radius: 6px;
+      background: #fff8e8;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 0 7px;
+    }
+
+    .book-actions button.delete {
+      color: var(--danger);
+    }
+
+    .reader-page {
+      position: absolute;
+      right: 38px;
+      bottom: 18px;
+      color: #40382f;
+      font-size: 15px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .screen {
+        padding: 0;
+      }
+
+      .tablet,
+      .reader-tablet {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        padding: 0;
+      }
+
+      .tablet-inner,
+      .reader-inner {
+        border-radius: 0;
+      }
+
+      .banner-row,
+      .continue-row,
+      .control-card,
+      .reader-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-area {
+        padding: 20px 26px 42px;
+      }
+    }
+
+    /* Creator Space Custom Styles */
+    .creator-container {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 768px) {
+      .creator-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .creator-card {
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(124, 89, 52, 0.12);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+    .creator-card h3 {
+      margin: 0 0 5px 0;
+      color: #6f4829;
+      font-size: 1.15rem;
+      border-bottom: 2px solid rgba(124, 89, 52, 0.1);
+      padding-bottom: 8px;
+    }
+    .creator-chapter-board {
+      margin-top: 20px;
+    }
+    .creator-book-group {
+      border: 1px solid rgba(124, 89, 52, 0.12);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(255, 250, 240, 0.58);
+    }
+    .creator-book-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      background: rgba(124, 89, 52, 0.08);
+      color: #5f3826;
+      font-weight: 850;
+    }
+    .creator-book-header span {
+      color: #796b5d;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .creator-chapter-list {
+      display: grid;
+      gap: 0;
+    }
+    .creator-chapter-row {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 11px 14px;
+      border-top: 1px solid rgba(124, 89, 52, 0.1);
+    }
+    .creator-chapter-num {
+      color: #9b6a3a;
+      font-weight: 900;
+      font-size: 13px;
+    }
+    .creator-chapter-title {
+      min-width: 0;
+      color: #2b2117;
+      font-weight: 750;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .creator-chapter-meta {
+      color: #796b5d;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .creator-empty {
+      padding: 14px;
+      color: #796b5d;
+      font-size: 13px;
+      border: 1px dashed rgba(124, 89, 52, 0.18);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.38);
+    }
+    @media (max-width: 768px) {
+      .creator-chapter-row {
+        grid-template-columns: 72px minmax(0, 1fr);
+      }
+      .creator-chapter-meta {
+        grid-column: 1 / -1;
+      }
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #5f3826;
+    }
+    .form-row-side {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 10px;
+    }
+    .form-file-input {
+      border: 1px dashed rgba(124, 89, 52, 0.3);
+      padding: 10px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: #796b5d;
+      transition: all 0.2s;
+    }
+    .form-file-input:hover {
+      background: rgba(255, 248, 232, 0.9);
+      border-color: var(--brand-2);
+    }
+    .form-file-input input[type="file"] {
+      display: none;
+    }
+    .image-input-container {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .preview-thumbnail {
+      width: 70px;
+      height: 90px;
+      border-radius: 6px;
+      background: rgba(124, 89, 52, 0.05);
+      border: 1px solid rgba(124, 89, 52, 0.15);
+      object-fit: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #9c8b7c;
+      overflow: hidden;
+    }
+    .preview-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fffaf0;
+      padding: 9px 12px;
+      color: var(--ink);
+      outline: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    select:focus {
+      border-color: var(--brand-2);
+      box-shadow: 0 0 0 3px rgba(198, 141, 82, .18);
+    }
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fffaf0;
+      padding: 9px 12px;
+      color: var(--ink);
+      outline: none;
+      font-size: 14px;
+      resize: vertical;
+    }
+    textarea:focus {
+      border-color: var(--brand-2);
+      box-shadow: 0 0 0 3px rgba(198, 141, 82, .18);
+    }
+    .creator-status-bar {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .creator-status-bar.success {
+      display: block;
+      background: rgba(95, 138, 98, 0.15);
+      color: #2e5130;
+      border: 1px solid rgba(95, 138, 98, 0.3);
+    }
+    .creator-status-bar.error {
+      display: block;
+      background: rgba(244, 67, 54, 0.1);
+      color: #c62828;
+      border: 1px solid rgba(244, 67, 54, 0.2);
+    }
+
+    /* Auth modal refresh */
+    .auth-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(226, 232, 241, 0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .auth-modal-overlay.hidden {
+      display: none;
+    }
+
+    .auth-modal {
+      position: relative;
+      width: min(420px, calc(100vw - 36px));
+      min-height: min(760px, calc(100vh - 36px));
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+      padding: 30px 28px 24px;
+      border-radius: 36px;
+      background: #ffffff;
+      border: 1px solid rgba(18, 28, 45, 0.08);
+      box-shadow: 0 30px 80px rgba(28, 40, 60, 0.18);
+      overflow: hidden;
+      color: #172033;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .auth-modal,
+    .auth-modal * {
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .auth-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid rgba(18, 28, 45, 0.1);
+      background: #f5f7fb;
+      color: #6b7689;
+      font-size: 1rem;
+      display: grid;
+      place-items: center;
+      transition: transform .15s ease, background .15s ease, color .15s ease;
+    }
+
+    .auth-modal-close:hover {
+      transform: translateY(-1px);
+      background: #ecf1f7;
+      color: #23304a;
+    }
+
+    .auth-logo-block {
+      padding: 42px 0 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .auth-logo-icon-box {
+      width: 104px;
+      height: 104px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, #ffd54a, #f5a623);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      font-size: 3rem;
+      box-shadow: 0 18px 34px rgba(245, 166, 35, 0.32);
+    }
+
+    .auth-logo-name {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1.05;
+      color: #172033;
+    }
+
+    .auth-logo-sub {
+      font-size: 0.88rem;
+      color: #7b8698;
+      line-height: 1.5;
+    }
+
+    .auth-tab-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 4px;
+      border-radius: 999px;
+      background: #eff3f9;
+      margin-top: 2px;
+    }
+
+    .auth-tab {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 14px;
+      background: transparent;
+      color: #6b7689;
+      font-size: 0.92rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
+    }
+
+    .auth-tab.active {
+      background: #ffffff;
+      color: #172033;
+      box-shadow: 0 8px 22px rgba(28, 40, 60, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .auth-modal-header {
+      padding: 4px 2px 0;
+      text-align: center;
+    }
+
+    .auth-modal-header .banner-title {
+      margin: 0;
+      font-size: 1.8rem;
+      line-height: 1.08;
+      font-weight: 900;
+      color: #172033;
+      text-transform: none;
+    }
+
+    .auth-modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .auth-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    #authFormFields {
+      display: grid;
+      gap: 12px;
+    }
+
+    .auth-google-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 54px;
+      padding: 14px 18px;
+      border-radius: 18px;
+      border: 1px solid #d8e0eb;
+      background: #ffffff;
+      color: #172033;
+      font-size: 0.96rem;
+      font-weight: 800;
+      box-shadow: 0 8px 22px rgba(28, 40, 60, 0.06);
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+    .auth-google-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(28, 40, 60, 0.1);
+      border-color: #cfd8e4;
+    }
+
+    .auth-facebook-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 52px;
+      padding: 13px 18px;
+      border-radius: 18px;
+      border: none;
+      background: #1877f2;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 850;
+      box-shadow: 0 12px 26px rgba(24, 119, 242, 0.2);
+      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    }
+
+    .auth-facebook-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 32px rgba(24, 119, 242, 0.27);
+      filter: brightness(1.03);
+    }
+
+    .provider-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.18);
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .google-icon {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 7px;
+      overflow: hidden;
+      background: #ffffff;
+      flex: 0 0 auto;
+    }
+
+    .auth-switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #6b7689;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .auth-switch-row .register-link,
+    .register-row .register-link {
+      border: none;
+      background: transparent;
+      padding: 0;
+      color: #f1a430;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #9aa5b9;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e3e9f2;
+    }
+
+    .auth-form input,
+    #authEmailInput,
+    #authPasswordInput {
+      width: 100%;
+      min-height: 48px;
+      padding: 13px 16px;
+      border-radius: 16px;
+      border: 1px solid #d8e0eb;
+      background: #fbfcfe;
+      color: #172033;
+      font-size: 0.96rem;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    .auth-form input:focus,
+    #authEmailInput:focus,
+    #authPasswordInput:focus {
+      border-color: #f1a430;
+      box-shadow: 0 0 0 4px rgba(241, 164, 48, 0.14);
+      background: #ffffff;
+    }
+
+    .auth-form input::placeholder,
+    #authEmailInput::placeholder,
+    #authPasswordInput::placeholder {
+      color: #a2acbc;
+    }
+
+    .password-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .password-row .forgot-link {
+      justify-self: flex-end;
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #6b7da6;
+      font-size: 0.86rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .auth-submit {
+      width: 100%;
+      min-height: 52px;
+      border: none;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #ffd14f, #f5a623);
+      color: #ffffff;
+      font-size: 0.96rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      box-shadow: 0 14px 30px rgba(245, 166, 35, 0.26);
+      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    }
+
+    .auth-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 34px rgba(245, 166, 35, 0.33);
+      filter: brightness(1.03);
+    }
+
+    .auth-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: #6f7a90;
+      font-size: 0.88rem;
+    }
+
+    .remember-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .remember-row input {
+      width: auto;
+      min-height: auto;
+      margin: 0;
+      accent-color: #f5a623;
+    }
+
+    .register-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #6f7a90;
+    }
+
+    .auth-warning {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f7f9fc;
+      border: 1px solid #e3e9f2;
+      color: #5d687d;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .auth-info-row {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f7f9fc;
+      border: 1px solid #e3e9f2;
+      color: #172033;
+      font-size: 0.92rem;
+    }
+
+    .auth-profile-panel {
+      display: none;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #e3e9f2;
+      background: #fbfcfe;
+    }
+
+    .auth-profile-panel.visible {
+      display: grid;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .profile-grid .wide {
+      grid-column: 1 / -1;
+    }
+
+    .profile-grid label {
+      display: grid;
+      gap: 6px;
+      color: #657186;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .profile-grid input,
+    .profile-grid textarea {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 14px;
+      border: 1px solid #d8e0eb;
+      background: #ffffff;
+      color: #172033;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      resize: vertical;
+    }
+
+    .profile-grid textarea {
+      min-height: 72px;
+    }
+
+    .auth-status-card {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f7f9fc;
+      border: 1px solid #e3e9f2;
+      color: #627086;
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+
+    .auth-status-card strong {
+      color: #172033;
+      font-size: 0.9rem;
+    }
+
+    .auth-action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .auth-button.primary {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 16px;
+      border: none;
+      background: #24324a;
+      color: #ffffff;
+      font-weight: 850;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease;
+    }
+
+    .auth-button.primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    .auth-button.secondary {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 16px;
+      border: 1px solid #e3e9f2;
+      background: #ffffff;
+      color: #c14e4e;
+      font-weight: 800;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease;
+    }
+
+    .auth-button.secondary:hover {
+      background: #fff7f7;
+      border-color: #f0cdcd;
+      transform: translateY(-1px);
+    }
+
+    .auth-admin-panel {
+      margin-top: 4px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #e3e9f2;
+      background: #fbfcfe;
+    }
+
+    .admin-panel-title {
+      margin-bottom: 10px;
+      font-weight: 800;
+      color: #172033;
+      font-size: 0.92rem;
+    }
+
+    .admin-panel-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .admin-user-list {
+      display: grid;
+      gap: 8px;
+      max-height: 240px;
+      overflow: auto;
+    }
+
+    .admin-user-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: #ffffff;
+      border: 1px solid #e3e9f2;
+      color: #344054;
+      font-size: 0.88rem;
+    }
+
+    .admin-user-row span {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-delete-user {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: none;
+      background: #f44336;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    .admin-delete-user:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .auth-legal-text {
+      font-size: 0.76rem;
+      color: #a0a8b7;
+      text-align: center;
+      line-height: 1.6;
+      margin-top: -2px;
+    }
+
+    .auth-legal-text a {
+      color: #f1a430;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .auth-legal-text a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 520px) {
+      .auth-modal-overlay {
+        padding: 10px;
+      }
+
+      .auth-modal {
+        width: 100%;
+        min-height: calc(100vh - 20px);
+        padding: 24px 18px 18px;
+        border-radius: 30px;
+      }
+
+      .auth-logo-icon-box {
+        width: 92px;
+        height: 92px;
+        font-size: 2.7rem;
+      }
+
+      .auth-logo-name {
+        font-size: 1.7rem;
+      }
+
+      .auth-modal-header .banner-title {
+        font-size: 1.55rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section id="homeScreen" class="screen">
+    <div class="tablet">
+      <div class="tablet-inner">
+        <header class="topbar">
+          <button id="profileButton" class="profile" type="button" aria-label="Mở đăng nhập">N</button>
+          <div class="logo">[NOVEL<span>NOOK</span>]</div>
+          <button class="icon-btn" type="button" aria-label="Tìm kiếm">S</button>
+        </header>
+
+        <main class="content">
+          <section id="tabHome" class="tab-panel active">
+            <section class="banner-row">
+              <article class="banner" id="bannerOne">
+                <div class="banner-content">
+                  <div class="banner-title">Library Translator</div>
+                  <div class="banner-sub">FlipHTML5 to Vietnamese reader</div>
+                  <button class="pill" type="button" data-open-tab="discover">READ NOW</button>
+                </div>
+              </article>
+              <article class="banner large" id="bannerMain">
+                <div class="banner-content">
+                  <div class="banner-title" id="featuredTitle">Novel Nook</div>
+                  <div class="banner-sub" id="featuredDesc">Tự động dịch và lưu sách ngay trên máy.</div>
+                  <button class="pill" type="button" data-open-latest>READ NOW</button>
+                </div>
+              </article>
+              <article class="banner" id="bannerThree">
+                <div class="banner-content">
+                  <div class="banner-title">Gemini Automation</div>
+                  <div class="banner-sub">Chạy trong nền sau khi đăng nhập</div>
+                  <button class="pill" type="button" data-open-tab="discover">READ NOW</button>
+                </div>
+              </article>
+            </section>
+
+            <div class="dots">...</div>
+
+            <section class="section-head">
+              <h2>CONTINUE READING</h2>
+              <div class="status">Đọc tiếp các bản dịch gần đây</div>
+            </section>
+            <section id="continueRow" class="continue-row"></section>
+
+            <section class="section-head">
+              <h2>POPULAR NOW</h2>
+              <div class="status">GENRES&nbsp;&nbsp; Action&nbsp; Romance&nbsp; Fantasy&nbsp; Slice of Life</div>
+            </section>
+            <section id="bookLine" class="library-line"></section>
+          </section>
+
+          <section id="tabLibrary" class="tab-panel">
+            <section class="section-head">
+              <h2>LIBRARY</h2>
+              <div class="status">Tất cả sách đã dịch trên máy này</div>
+            </section>
+            <section id="libraryGrid" class="book-grid"></section>
+          </section>
+
+          <section id="tabDiscover" class="tab-panel">
+            <section class="discover-card">
+              <h2>DISCOVER</h2>
+              <p class="helper">Danh sách truyện do admin quản lý. User thường có thể xem và mở các truyện này.</p>
+              <div id="discoverAdminControls" class="control-card hidden" style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; gap:10px;">
+                  <input id="urlInput" type="url" placeholder="Link gốc (VD: https://...)" autocomplete="off" style="flex:1;">
+                  <input id="maxChaptersInput" type="number" placeholder="Số chương (VD: 50)" style="width: 160px;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <input id="customTitleInput" type="text" placeholder="Tên truyện (Tùy chọn)" autocomplete="off" style="flex:1;">
+                  <input id="customCoverInput" type="url" placeholder="Link ảnh bìa (Tùy chọn)" autocomplete="off" style="flex:1;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <input id="extraPromptInput" type="text" placeholder="Ghi chú cho AI (Tùy chọn)" value="với 2 nhân vật chính là Amane Fujimiya và Mahiru Shinna" autocomplete="off" style="flex:1;">
+                </div>
+                <div style="display:flex; gap:10px; margin-top: 10px;">
+                  <button id="runButton" class="action" type="button">DỊCH SÁCH</button>
+                  <button id="setupButton" class="action secondary" type="button">ĐĂNG NHẬP</button>
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:#796b5d;cursor:pointer;user-select:none">
+                  <input id="debugCheckbox" type="checkbox" style="width:auto;min-height:auto;margin:0;cursor:pointer">
+                  Debug (hiện Chrome để theo dõi Gemini)
+                </label>
+                <section class="progress" aria-live="polite">
+                  <span>Tiến độ</span>
+                  <div class="progress-track"><span id="progressBar"></span></div>
+                  <strong id="progressNumber">0%</strong>
+                </section>
+                <div id="statusText" class="status" style="margin-top: 10px;">Sẵn sàng.</div>
+                <ul class="steps">
+                  <li>1. Bấm ĐĂNG NHẬP nếu đây là lần đầu dùng Gemini.</li>
+                  <li>2. Dán link truyện và bấm DỊCH SÁCH để tải về và dịch.</li>
+                  <li>3. Khi hoàn tất, truyện sẽ được lưu vào thư viện bài dịch của bạn.</li>
+                </ul>
+
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #e0e0e0;">
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                  <input id="fileUploadInput" type="file" accept=".pdf,.docx,.doc" style="flex:1;" placeholder="Chọn file PDF hoặc Word">
+                  <input id="coverImageInput" type="file" accept="image/*" style="flex:1;" placeholder="Ảnh bìa (Tùy chọn)">
+                </div>
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                  <input id="googleDocsLink" type="text" placeholder="Google Docs link (để export thành PDF)" style="flex:1;">
+                  <input id="googleDriveLink" type="text" placeholder="Google Drive file link" style="flex:1;">
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <input id="fileUploadTitle" type="text" placeholder="Tên file" style="flex:1;">
+                  <input id="chapterCountInput" type="number" placeholder="Số chương" min="1" style="flex:1; max-width:100px;">
+                  <button id="uploadFileButton" class="action" type="button">UPLOAD</button>
+                </div>
+                <div id="fileUploadStatus" style="font-size:12px; color:#666; margin-top:5px;"></div>
+              </div>
+              <div id="discoverSourceList" class="discover-source-list" style="display:grid; gap:12px; margin-top:16px;"></div>
+              <div id="discoverUserEmpty" class="discover-empty" style="min-height: 320px; border: 1px dashed rgba(0,0,0,0.08); border-radius: 12px; margin-top: 16px; padding: 18px; display:none;"></div>
+            </section>
+          </section>
+
+          <section id="tabProfile" class="tab-panel">
+            <section class="profile-card">
+              <h2>PROFILE</h2>
+              
+              <!-- When logged out -->
+              <div id="tabProfileLoginPromptCard">
+                <p class="helper" style="margin-bottom:15px;">Bạn cần đăng nhập để quản lý hồ sơ và sử dụng các tính năng nâng cao.</p>
+                <button id="tabProfileLoginButton" class="auth-button primary" type="button">Đăng nhập ngay</button>
+              </div>
+
+              <!-- When logged in -->
+              <div id="tabProfileFormCard" style="display:none; flex-direction:column; gap:16px;">
+                <div class="auth-info-row" id="authUserInfo" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span id="authName">-</span>
+                  <strong id="authEmail">-</strong>
+                </div>
+
+                <div class="auth-warning" id="profileMessage" style="display:none; margin-bottom: 12px;"></div>
+
+                <div id="authProfilePanel" class="auth-profile-panel" style="display:grid; width:100%;">
+                  <div class="profile-grid">
+                    <label>Tên hiển thị
+                      <input id="profileDisplayNameInput" type="text" placeholder="Tên bạn muốn hiển thị">
+                    </label>
+                    <label>Thể loại thích đọc
+                      <input id="profileGenreInput" type="text" placeholder="Romance, Fantasy...">
+                    </label>
+                    <label>Số điện thoại
+                      <input id="profilePhoneInput" type="tel" placeholder="+84...">
+                    </label>
+                    <label>Ảnh đại diện
+                      <input id="profileAvatarInput" type="url" placeholder="https://...">
+                    </label>
+                    <label class="wide">Giới thiệu
+                      <textarea id="profileBioInput" placeholder="Một dòng ngắn về gu đọc truyện của bạn"></textarea>
+                    </label>
+                  </div>
+                  <div class="auth-action-row" style="margin-top: 12px;">
+                    <button id="saveProfileButton" class="auth-button primary" type="button">Lưu profile</button>
+                    <button id="refreshChromeProfileButton" class="auth-button secondary" type="button">Kiểm tra Chrome</button>
+                  </div>
+                </div>
+
+                <button id="signOutButton" class="auth-button secondary" type="button" style="width:100%; margin-top:4px;">Đăng xuất</button>
+                <button id="clearUsersButton" class="auth-button secondary hidden" type="button" style="width:100%; margin-top:4px;">Clear All Users</button>
+
+                <div id="adminPanel" class="auth-admin-panel hidden" style="margin-top: 12px; width:100%;">
+                  <div class="admin-panel-title">Admin Dashboard</div>
+                  <div class="admin-panel-actions">
+                    <button id="refreshAdminUsersButton" class="auth-button secondary" type="button">Reload Users</button>
+                    <button id="manageUploadsButton" class="auth-button" type="button">Quản lý bài đăng</button>
+                  </div>
+                  <div id="adminUserList" class="admin-user-list"></div>
+                </div>
+              </div>
+
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid rgba(124,89,52,0.15);">
+              <p class="helper">Thông tin cục bộ của ứng dụng.</p>
+              <ul class="steps" style="margin-top:10px;">
+                <li id="bookCount">Sách đã lưu: 0</li>
+                <li>Phiên đăng nhập Gemini được lưu bằng Chrome profile riêng.</li>
+                <li>Dữ liệu sách nằm trên máy, không dùng máy chủ riêng.</li>
+              </ul>
+            </section>
+          </section>
+
+          <section id="tabCloud" class="tab-panel">
+            <section class="profile-card">
+              <h2>CLOUD SYNC</h2>
+              <p class="helper">Admin push truyện lên Firebase; user có thể kéo truyện về máy từ database đó.</p>
+              <div class="control-card" style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:none; gap:10px;">
+                  <input id="firebaseUrlInput" type="url" placeholder="Link Firebase Realtime DB (VD: https://my-db.firebaseio.com/)" autocomplete="off" style="flex:1;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <button id="syncButton" class="action" type="button">ĐỒNG BỘ LÊN ĐÁM MÂY</button>
+                  <button id="pullButton" class="action secondary" type="button">KÉO DỮ LIỆU VỀ</button>
+                </div>
+                <div id="syncStatus" class="status" style="margin-top: 10px;">Sẵn sàng.</div>
+              </div>
+            </section>
+          </section>
+
+          <section id="tabCreator" class="tab-panel">
+            <section class="profile-card" style="max-height: calc(100vh - 160px); overflow-y: auto; padding-bottom: 30px;">
+              <h2>CREATOR SPACE</h2>
+              <p class="helper">Đăng tác phẩm mới của bạn và xuất bản các chương tiếp theo theo thời gian.</p>
+              
+              <div class="creator-container">
+                <!-- Column 1: Create New Book -->
+                <div class="creator-card">
+                  <h3>Tạo Truyện Mới</h3>
+                  
+                  <div class="form-group">
+                    <label for="bookTitleInput">Tên truyện <span style="color:red">*</span></label>
+                    <input id="bookTitleInput" type="text" placeholder="Nhập tên truyện..." autocomplete="off">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="bookDescInput">Mô tả ngắn</label>
+                    <textarea id="bookDescInput" placeholder="Nhập mô tả tóm tắt truyện..."></textarea>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>Ảnh bìa truyện</label>
+                    <div class="image-input-container">
+                      <div style="display:flex; flex-direction:column; gap:8px; flex:1;">
+                        <input id="bookCoverUrlInput" type="url" placeholder="Dán link ảnh (URL)..." autocomplete="off">
+                        <label class="form-file-input">
+                          <span>📁 Chọn file ảnh từ máy...</span>
+                          <input id="bookCoverFileInput" type="file" accept="image/*">
+                        </label>
+                      </div>
+                      <div class="preview-thumbnail" id="bookCoverPreviewContainer">
+                        <span>No image</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button id="createBookButton" class="action" type="button" style="margin-top:10px;">TẠO TRUYỆN MỚI</button>
+                  <div id="createBookStatus" class="creator-status-bar"></div>
+                </div>
+
+                <!-- Column 2: Add Chapter -->
+                <div class="creator-card">
+                  <h3>Đăng Chương Mới</h3>
+                  
+                  <div class="form-group">
+                    <label for="creatorBookSelect">Chọn quyển truyện <span style="color:red">*</span></label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <select id="creatorBookSelect" style="flex:1;">
+                        <option value="">-- Chọn quyển truyện --</option>
+                      </select>
+                      <button id="pushToDiscoveryButton" class="action secondary" type="button" style="min-width: 140px; min-height: 42px;">Đẩy lên Discovery</button>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <div class="form-row-side">
+                      <div class="form-group">
+                        <label for="chapterNumInput">Số chương <span style="color:red">*</span></label>
+                        <input id="chapterNumInput" type="number" min="1" placeholder="VD: 1">
+                      </div>
+                      <div class="form-group">
+                        <label for="chapterNameInput">Tên chương <span style="color:red">*</span></label>
+                        <input id="chapterNameInput" type="text" placeholder="Nhập tên chương..." autocomplete="off">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>Nội dung chương <span style="color:red">*</span></label>
+                    <input id="chapterContentUrlInput" type="text" placeholder="Dán link bản thảo (Google Docs / Drive...)" autocomplete="off" style="margin-bottom:8px;">
+                    <label class="form-file-input">
+                      <span id="chapterFileLabel">📁 Chọn file tài liệu từ máy (.txt, .docx, .doc, .pdf)...</span>
+                      <input id="chapterFileInput" type="file" accept=".txt,.docx,.doc,.pdf">
+                    </label>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>Ảnh minh họa chương</label>
+                    <div class="image-input-container">
+                      <div style="display:flex; flex-direction:column; gap:8px; flex:1;">
+                        <input id="chapterIllustUrlInput" type="url" placeholder="Dán link ảnh (URL)..." autocomplete="off">
+                        <label class="form-file-input">
+                          <span>📁 Chọn file ảnh từ máy...</span>
+                          <input id="chapterIllustFileInput" type="file" accept="image/*">
+                        </label>
+                      </div>
+                      <div class="preview-thumbnail" id="chapterIllustPreviewContainer">
+                        <span>No image</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button id="publishChapterButton" class="action" type="button" style="margin-top:10px;">XUẤT BẢN CHƯƠNG</button>
+                  <div id="publishChapterStatus" class="creator-status-bar"></div>
+                </div>
+              </div>
+              <div class="creator-card creator-chapter-board">
+                <h3>Danh sách chương theo truyện</h3>
+                <div id="creatorChapterBoard" class="creator-empty">Chọn tab Writer để tải danh sách chương.</div>
+              </div>
+            </section>
+          </section>
+        </main>
+
+        <nav class="bottom-nav">
+          <button class="active" type="button" data-tab="home"><strong>H</strong><span>HOME</span></button>
+          <button type="button" data-tab="library"><strong>L</strong><span>LIBRARY</span></button>
+          <button type="button" data-tab="discover"><strong>D</strong><span>DISCOVER</span></button>
+          <button type="button" data-tab="creator"><strong>W</strong><span>WRITE</span></button>
+          <button type="button" data-tab="cloud"><strong>C</strong><span>CLOUD</span></button>
+          <button type="button" data-tab="profile"><strong>P</strong><span>PROFILE</span></button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <div id="authModal" class="auth-modal-overlay hidden">
+    <div class="auth-modal">
+      <button id="authCloseButton" class="auth-modal-close" type="button">✕</button>
+
+      <!-- Logo -->
+      <div class="auth-logo-block">
+        <div class="auth-logo-icon-box">📚</div>
+        <div class="auth-logo-name">[NOVELNOOK]</div>
+        <div class="auth-logo-sub">Đọc truyện đồng bộ mọi nơi</div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-tab-row">
+        <button id="authSignInTab" class="auth-tab active" type="button">Đăng nhập</button>
+        <button id="authSignUpTab" class="auth-tab" type="button">Đăng ký</button>
+      </div>
+
+      <!-- Header title -->
+      <div class="auth-modal-header">
+        <div class="banner-title" id="authHeaderTitle">Sign In</div>
+      </div>
+
+      <div class="auth-modal-content" id="authContent">
+        <div class="auth-panel">
+          <div id="authFormFields">
+            <!-- Google CTA -->
+            <button id="signInGoogleButton" class="auth-google-button" type="button">
+              <span class="google-icon">
+                <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+                  <path d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.6 20-21 0-1.3-.2-2.7-.5-4z" fill="#FFC107"/>
+                  <path d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3c-7.6 0-14.2 4.3-17.7 10.7z" fill="#FF3D00"/>
+                  <path d="M24 45c5.5 0 10.5-2 14.3-5.4l-6.6-5.6C29.8 35.6 27 37 24 37c-5.8 0-10.7-3.9-11.8-9.1l-7 5.4C8.1 40.8 15.5 45 24 45z" fill="#4CAF50"/>
+                  <path d="M44.5 20H24v8.5h11.8c-.6 2.9-2.6 5.4-5.4 7l6.6 5.6c3.9-3.5 6.5-9 6.5-16.1 0-1.3-.2-2.7-.5-4z" fill="#1976D2"/>
+                </svg>
+              </span>
+              <span id="authGoogleBtnText">SIGN IN WITH GOOGLE</span>
+            </button>
+
+            <button id="signInFacebookButton" class="auth-facebook-button" type="button">
+              <span class="provider-icon">f</span>
+              <span>Tiếp tục với Facebook</span>
+            </button>
+
+            <div id="chromeProfileStatus" class="auth-status-card">
+              <strong>Google Chrome profile</strong>
+              <span>Đang kiểm tra Chrome profile gần nhất...</span>
+            </div>
+
+            <!-- Switch link -->
+            <div class="auth-switch-row" id="authSwitchRow">
+              Chưa có tài khoản? <button id="authSignUpButton" type="button" class="register-link">Sign Up</button>
+            </div>
+
+            <!-- Divider -->
+            <div class="auth-divider">Or continue with email</div>
+
+            <!-- Email / password -->
+            <input id="authEmailInput" type="email" placeholder="Email hoặc username" autocomplete="username">
+            <div class="password-row">
+              <input id="authPasswordInput" type="password" placeholder="Mật khẩu" autocomplete="current-password">
+              <button id="forgotPasswordButton" class="forgot-link" type="button">Quên mật khẩu?</button>
+            </div>
+            <button id="authActionButton" class="auth-submit" type="button">SIGN IN</button>
+
+            <div class="auth-meta">
+              <label class="remember-row"><input id="rememberCheckbox" type="checkbox"> Nhớ tôi</label>
+              <div class="register-row">No account? <button id="authSignUpButton2" type="button" class="register-link">Sign Up</button></div>
+            </div>
+
+            <p class="auth-legal-text">
+              Bằng cách tiếp tục bạn đồng ý với <a href="#">Điều khoản dịch vụ</a>.
+            </p>
+          </div>
+
+          <div class="auth-warning" id="authMessage" style="display:none">Enter your email and password or use Google to sign in.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="readerScreen" class="reader-shell">
+    <div class="reader-tablet">
+      <div class="reader-inner">
+        <div class="reader-status">
+          <span>10:09 PM</span>
+          <span>Wi-Fi 74%</span>
+        </div>
+        <header class="reader-toolbar">
+          <button id="backButton" class="back" type="button" aria-label="Quay lại">&lt;</button>
+          <div id="readerBookTitle" class="reader-book-title">Chưa chọn sách</div>
+          <div class="page-progress">
+            <span id="readerProgressPercent">0%</span>
+            <div id="readerSlider" class="slider"></div>
+          </div>
+          <div class="toolbar-actions">
+            <span id="pageLabel">Chapter 1 of 1</span>
+            <button id="nightButton" type="button">Night Mode</button>
+            <span class="switch"></span>
+            <button id="fontDownButton" type="button">A-</button>
+            <button id="fontUpButton" type="button">A+</button>
+            <button id="menuButton" type="button">TOC</button>
+            <button id="deleteReaderButton" class="delete" type="button">Delete</button>
+          </div>
+        </header>
+        <main class="reading-area">
+          <div class="chapter-nav">
+            <button id="prevChapterButton" type="button">Previous</button>
+            <button id="nextChapterButton" type="button">Next</button>
+          </div>
+          <h1 id="chapterTitle" class="chapter-title">Chapter 1: Bản dịch</h1>
+          <div id="readerMeta" class="reader-meta">Bản dịch sẽ hiển thị ở đây sau khi hoàn tất.</div>
+          <article id="readerText" class="reader-text">
+            <p>Hãy chọn một sách từ trang chủ hoặc dịch sách mới.</p>
+          </article>
+          <div class="reader-page">23/30</div>
+        </main>
+      </div>
+    </div>
+    <aside id="sidePanel" class="side-panel hidden"></aside>
+  </section>
+
+  <script>
+    // ── ipcRenderer SHIM (Web Version) ──────────────────────────────────────
+    // Replaces Electron IPC with REST API calls to the backend server.
+    const _apiBase = '';  // Same origin when served by Express
+
+    // WebSocket for real-time automation progress
+    let _ws = null;
+    const _wsListeners = {};
+
+    function _connectWs() {
+      try {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        _ws = new WebSocket(`${proto}//${location.host}`);
+        _ws.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data);
+            const handlers = _wsListeners[msg.type] || [];
+            handlers.forEach(fn => fn(null, msg));
+          } catch {}
+        };
+        _ws.onclose = () => { setTimeout(_connectWs, 3000); };
+      } catch {}
+    }
+    _connectWs();
+
+    const ipcRenderer = {
+      invoke: async (channel, ...args) => {
+        try {
+          const res = await fetch(`${_apiBase}/api/ipc/${channel}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args })
+          });
+          if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+          return await res.json();
+        } catch (err) {
+          return { ok: false, error: err.message || String(err) };
+        }
+      },
+      on: (channel, fn) => {
+        if (!_wsListeners[channel]) _wsListeners[channel] = [];
+        _wsListeners[channel].push(fn);
+      },
+      removeAllListeners: (channel) => {
+        if (channel) delete _wsListeners[channel];
+        else Object.keys(_wsListeners).forEach(k => delete _wsListeners[k]);
+      }
+    };
+
+    // shell.openExternal stub
+    const shell = {
+      openExternal: (url) => { window.open(url, '_blank'); }
+    };
+    // ── END SHIM ─────────────────────────────────────────────────────────────
+
+    const homeScreen = document.getElementById('homeScreen');
+    const readerScreen = document.getElementById('readerScreen');
+    const urlInput = document.getElementById('urlInput');
+    const runButton = document.getElementById('runButton');
+    const setupButton = document.getElementById('setupButton');
+    const syncButton = document.getElementById('syncButton');
+    const pullButton = document.getElementById('pullButton');
+    const firebaseUrlInput = document.getElementById('firebaseUrlInput');
+    const discoverAdminControls = document.getElementById('discoverAdminControls');
+    const discoverSourceList = document.getElementById('discoverSourceList');
+    const discoverUserEmpty = document.getElementById('discoverUserEmpty');
+    const syncStatus = document.getElementById('syncStatus');
+    const backButton = document.getElementById('backButton');
+    const statusText = document.getElementById('statusText');
+    const progressNumber = document.getElementById('progressNumber');
+    const progressBar = document.getElementById('progressBar');
+    const continueRow = document.getElementById('continueRow');
+    const bookLine = document.getElementById('bookLine');
+    const libraryGrid = document.getElementById('libraryGrid');
+    const featuredTitle = document.getElementById('featuredTitle');
+    const featuredDesc = document.getElementById('featuredDesc');
+    const readerBookTitle = document.getElementById('readerBookTitle');
+    const chapterTitle = document.getElementById('chapterTitle');
+    const readerMeta = document.getElementById('readerMeta');
+    const readerText = document.getElementById('readerText');
+    const bookCount = document.getElementById('bookCount');
+    const readingArea = document.querySelector('.reading-area');
+    const readerProgressPercent = document.getElementById('readerProgressPercent');
+    const pageLabel = document.getElementById('pageLabel');
+    const prevChapterButton = document.getElementById('prevChapterButton');
+    const nextChapterButton = document.getElementById('nextChapterButton');
+    const nightButton = document.getElementById('nightButton');
+    const fontDownButton = document.getElementById('fontDownButton');
+    const fontUpButton = document.getElementById('fontUpButton');
+    const menuButton = document.getElementById('menuButton');
+    const deleteReaderButton = document.getElementById('deleteReaderButton');
+    const sidePanel = document.getElementById('sidePanel');
+    const profileButton = document.getElementById('profileButton');
+    const authModal = document.getElementById('authModal');
+    const authCloseButton = document.getElementById('authCloseButton');
+    const authSignInTab = document.getElementById('authSignInTab');
+    const authSignUpTab = document.getElementById('authSignUpTab');
+    const authHeaderTitle = document.getElementById('authHeaderTitle');
+    const authSwitchRow = document.getElementById('authSwitchRow');
+    const authGoogleBtnText = document.getElementById('authGoogleBtnText');
+    const authMessage = document.getElementById('authMessage');
+    const signInGoogleButton = document.getElementById('signInGoogleButton');
+    const signInFacebookButton = document.getElementById('signInFacebookButton');
+    const chromeProfileStatus = document.getElementById('chromeProfileStatus');
+    const signOutButton = document.getElementById('signOutButton');
+    const authUserInfo = document.getElementById('authUserInfo');
+    const authName = document.getElementById('authName');
+    const authEmail = document.getElementById('authEmail');
+    const authProfilePanel = document.getElementById('authProfilePanel');
+    const profileDisplayNameInput = document.getElementById('profileDisplayNameInput');
+    const profileGenreInput = document.getElementById('profileGenreInput');
+    const profilePhoneInput = document.getElementById('profilePhoneInput');
+    const profileAvatarInput = document.getElementById('profileAvatarInput');
+    const profileBioInput = document.getElementById('profileBioInput');
+    const saveProfileButton = document.getElementById('saveProfileButton');
+    const refreshChromeProfileButton = document.getElementById('refreshChromeProfileButton');
+    const authFormFields = document.getElementById('authFormFields');
+    const authEmailInput = document.getElementById('authEmailInput');
+    const authPasswordInput = document.getElementById('authPasswordInput');
+    const authActionButton = document.getElementById('authActionButton');
+    const forgotPasswordButton = document.getElementById('forgotPasswordButton');
+    const rememberCheckbox = document.getElementById('rememberCheckbox');
+    const authSignUpButton = document.getElementById('authSignUpButton');
+    const authSignUpButton2 = document.getElementById('authSignUpButton2');
+    const clearUsersButton = document.getElementById('clearUsersButton');
+    const adminPanel = document.getElementById('adminPanel');
+    const refreshAdminUsersButton = document.getElementById('refreshAdminUsersButton');
+    const manageUploadsButton = document.getElementById('manageUploadsButton');
+    const adminUserList = document.getElementById('adminUserList');
+    const tabProfileLoginPromptCard = document.getElementById('tabProfileLoginPromptCard');
+    const tabProfileFormCard = document.getElementById('tabProfileFormCard');
+    const tabProfileLoginButton = document.getElementById('tabProfileLoginButton');
+    const profileMessage = document.getElementById('profileMessage');
+    if (authMessage) authMessage.style.display = 'block';
+
+    const DEFAULT_FIREBASE_DATABASE_URL = 'https://nooknovel-7b5a1-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+    let isAuthenticated = false;
+    let currentUserRole = 'user';
+    let books = [];
+    let catalogBooks = [];
+    let activeBookId = null;
+    let activeBook = null;
+    let currentChapterIndex = 0;
+    let currentTab = 'home';
+    let fontMode = 'normal';
+    let progressTimer = null;
+    let authMode = 'signin';
+    let currentUser = null;
+    let isTbcSorting = false;
+    let tbcTempChapters = [];
+
+    function setTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
+      document.getElementById(`tab${tabName[0].toUpperCase()}${tabName.slice(1)}`).classList.add('active');
+      document.querySelectorAll('.bottom-nav button').forEach((button) => {
+        button.classList.toggle('active', button.dataset.tab === tabName);
+      });
+    }
+
+    function renderProfileTab() {
+      if (isAuthenticated) {
+        if (tabProfileLoginPromptCard) tabProfileLoginPromptCard.style.display = 'none';
+        if (tabProfileFormCard) tabProfileFormCard.style.display = 'flex';
+      } else {
+        if (tabProfileLoginPromptCard) tabProfileLoginPromptCard.style.display = 'block';
+        if (tabProfileFormCard) tabProfileFormCard.style.display = 'none';
+      }
+      if (profileMessage) {
+        profileMessage.style.display = 'none';
+        profileMessage.textContent = '';
+      }
+    }
+
+    function setProgress(message, progress) {
+      const value = Number.isFinite(progress) ? Math.round(progress) : 0;
+      statusText.textContent = message;
+      progressNumber.textContent = `${value}%`;
+      progressBar.style.width = `${value}%`;
+    }
+
+    function setAuthMessage(message) {
+      authMessage.textContent = message;
+      authMessage.style.display = 'block';
+    }
+
+    function getRememberedAuthEmail() {
+      return localStorage.getItem('rememberedAuthEmail') || '';
+    }
+
+    function syncAuthEmailWithRememberMe() {
+      const rememberedEmail = getRememberedAuthEmail();
+      if (rememberedEmail) {
+        authEmailInput.value = rememberedEmail;
+        rememberCheckbox.checked = true;
+      } else {
+        rememberCheckbox.checked = false;
+      }
+    }
+
+    function rememberAuthEmail(email) {
+      if (rememberCheckbox.checked && email) {
+        localStorage.setItem('rememberedAuthEmail', String(email).trim().toLowerCase());
+      } else {
+        localStorage.removeItem('rememberedAuthEmail');
+      }
+    }
+
+    async function loadChromeProfileStatus() {
+      if (!chromeProfileStatus) return;
+      const textNode = chromeProfileStatus.querySelector('span');
+      textNode.textContent = 'Đang kiểm tra Chrome profile gần nhất...';
+
+      try {
+        const result = await ipcRenderer.invoke('auth-chrome-profile-info');
+        if (!result.ok) {
+          textNode.textContent = result.error || 'Không đọc được Chrome profile.';
+          return;
+        }
+
+        const label = result.exists
+          ? `${result.profileDir} (${result.source})`
+          : 'Chưa tìm thấy, app sẽ dùng session riêng';
+        textNode.textContent = `${label} - ${result.chromePath}`;
+      } catch (error) {
+        textNode.textContent = `Lỗi kiểm tra Chrome: ${error.message}`;
+      }
+    }
+
+    function fillProfileForm(user = {}) {
+      if (!profileDisplayNameInput) return;
+      profileDisplayNameInput.value = user.displayName || '';
+      profileGenreInput.value = user.favoriteGenre || '';
+      profilePhoneInput.value = user.phone || '';
+      profileAvatarInput.value = user.avatarUrl || '';
+      profileBioInput.value = user.bio || '';
+    }
+
+    function profilePayloadFromForm() {
+      return {
+        displayName: profileDisplayNameInput.value.trim(),
+        favoriteGenre: profileGenreInput.value.trim(),
+        phone: profilePhoneInput.value.trim(),
+        avatarUrl: profileAvatarInput.value.trim(),
+        bio: profileBioInput.value.trim()
+      };
+    }
+
+    function formatDate(value) {
+      return new Date(value).toLocaleString('vi-VN', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      });
+    }
+
+    function coverNode(book, fallbackClass = 'cover-fallback') {
+      if (book?.coverUrl) {
+        const img = document.createElement('img');
+        img.src = book.coverUrl;
+        img.alt = book.title || 'Bìa sách';
+        img.onerror = () => {
+          const fallback = document.createElement('div');
+          fallback.className = fallbackClass;
+          fallback.textContent = 'NO COVER';
+          img.replaceWith(fallback);
+        };
+        return img;
+      }
+
+      const fallback = document.createElement('div');
+      fallback.className = fallbackClass;
+      fallback.textContent = 'NO COVER';
+      return fallback;
+    }
+
+    function setBannerBackground(id, book) {
+      const banner = document.getElementById(id);
+      const oldImage = banner.querySelector('img');
+      if (oldImage) oldImage.remove();
+      if (!book?.coverUrl) return;
+      const image = document.createElement('img');
+      image.src = book.coverUrl;
+      image.alt = book.title;
+      banner.prepend(image);
+    }
+
+    function updateBanners() {
+      const first = books[0];
+      const second = books[1] || first;
+      const third = books[2] || first;
+      setBannerBackground('bannerMain', first);
+      setBannerBackground('bannerOne', second);
+      setBannerBackground('bannerThree', third);
+      featuredTitle.textContent = first?.title || 'Novel Nook';
+      featuredDesc.textContent = first
+        ? `Đọc tiếp bản dịch đã lưu lúc ${formatDate(first.createdAt)}.`
+        : 'Tự động dịch và lưu sách ngay trên máy.';
+      bookCount.textContent = `Sách đã lưu: ${books.length}`;
+    }
+
+    function renderContinue() {
+      continueRow.innerHTML = '';
+      const items = books.slice(0, 3);
+
+      if (!items.length) {
+        continueRow.innerHTML = '<div class="status">Chưa có sách đã dịch.</div>';
+        return;
+      }
+
+      for (const book of items) {
+        const card = document.createElement('button');
+        card.className = 'continue-card';
+        card.type = 'button';
+        card.appendChild(coverNode(book));
+
+        const body = document.createElement('div');
+        const percent = Math.round(book.readingPercent || 0);
+        body.innerHTML = `
+          <div class="continue-title"></div>
+          <div class="continue-meta"></div>
+          <div class="mini-progress"><span style="width: ${percent}%"></span></div>
+        `;
+        body.querySelector('.continue-title').textContent = book.title;
+        body.querySelector('.continue-meta').textContent = `${book.currentChapterTitle || 'Chapter 1'} (${percent}%)`;
+        card.appendChild(body);
+
+        const play = document.createElement('span');
+        play.className = 'play';
+        play.textContent = '>';
+        card.appendChild(play);
+
+        card.addEventListener('click', () => openBook(book.id));
+        continueRow.appendChild(card);
+      }
+    }
+
+    function renderBookCards(container, emptyText, withActions = false) {
+      container.innerHTML = '';
+
+      if (!books.length) {
+        container.innerHTML = `<div class="status">${emptyText}</div>`;
+        return;
+      }
+
+      for (const book of books) {
+        const card = document.createElement('div');
+        card.className = `book-card${book.id === activeBookId ? ' active' : ''}`;
+
+        const cover = document.createElement('div');
+        cover.className = 'book-cover';
+        cover.appendChild(coverNode(book));
+        card.appendChild(cover);
+
+        const name = document.createElement('div');
+        name.className = 'book-name';
+        name.textContent = book.title;
+        card.appendChild(name);
+
+        const desc = document.createElement('div');
+        desc.className = 'book-desc';
+        const percent = Math.round(book.readingPercent || 0);
+        desc.textContent = `${book.chapterCount || 1} chapter · ${percent}%`;
+        card.appendChild(desc);
+
+        card.addEventListener('click', () => openBook(book.id));
+
+        if (withActions) {
+          const actions = document.createElement('div');
+          actions.className = 'book-actions';
+
+          const openButton = document.createElement('button');
+          openButton.type = 'button';
+          openButton.textContent = 'Open';
+          openButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openBook(book.id);
+          });
+
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'delete';
+          deleteButton.textContent = 'Delete';
+          deleteButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            deleteBook(book.id);
+          });
+
+          actions.appendChild(openButton);
+          actions.appendChild(deleteButton);
+          card.appendChild(actions);
+        }
+
+        container.appendChild(card);
+      }
+    }
+
+    function renderAllLists() {
+      renderContinue();
+      renderBookCards(bookLine, 'Dịch sách đầu tiên trong tab Discover để tạo thư viện.', true);
+      renderBookCards(libraryGrid, 'Chưa có sách trong Library.', true);
+      renderDiscoverSources();
+      updateBanners();
+    }
+
+    let filesList = [];
+
+    function renderCatalog() {
+      if (!discoverSourceList || !discoverUserEmpty) return;
+      discoverSourceList.innerHTML = '';
+
+      const hasBooks = catalogBooks && catalogBooks.length > 0;
+      const hasFiles = filesList && filesList.length > 0;
+
+      if (!hasBooks && !hasFiles) {
+        discoverUserEmpty.style.display = 'block';
+        discoverUserEmpty.innerHTML = '<div class="status">Hiện chưa có truyện hoặc file admin quản lý.</div>';
+        return;
+      }
+
+      discoverUserEmpty.style.display = 'none';
+
+      for (const catalogBook of catalogBooks) {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+
+        // Add cover image
+        const cover = document.createElement('div');
+        cover.className = 'book-cover';
+        if (catalogBook.coverUrl) {
+          const img = document.createElement('img');
+          img.src = catalogBook.coverUrl;
+          img.alt = catalogBook.title;
+          img.onerror = () => {
+            cover.innerHTML = '<div class="cover-fallback">NO COVER</div>';
+          };
+          cover.appendChild(img);
+        } else {
+          cover.innerHTML = '<div class="cover-fallback">NO COVER</div>';
+        }
+        card.appendChild(cover);
+
+        const name = document.createElement('div');
+        name.className = 'book-name';
+        name.textContent = catalogBook.title || 'Truyện chưa có tên';
+        card.appendChild(name);
+
+        const desc = document.createElement('div');
+        desc.className = 'book-desc';
+        desc.textContent = `${catalogBook.chapterCount || 1} chương`;
+        card.appendChild(desc);
+
+        const actionRow = document.createElement('div');
+        actionRow.className = 'book-actions';
+
+        const pullButton = document.createElement('button');
+        pullButton.type = 'button';
+        pullButton.textContent = 'Tải về';
+        pullButton.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await pullSingleBook(catalogBook.id);
+        });
+        actionRow.appendChild(pullButton);
+
+        // Admin can delete
+        if (isAuthenticated && currentUserRole === 'admin') {
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'delete';
+          deleteButton.textContent = 'Xóa';
+          deleteButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const dbUrl = firebaseUrlInput.value.trim() || DEFAULT_FIREBASE_DATABASE_URL;
+            const currentEmail = localStorage.getItem('currentUserEmail');
+            const ok = confirm('Xác nhận xóa truyện này trên Firebase?');
+            if (!ok) return;
+            const res = await ipcRenderer.invoke('admin-delete-remote-book', dbUrl, catalogBook.id, currentEmail);
+            if (res.ok) {
+              alert('Xóa thành công.');
+              await loadCatalog();
+            } else {
+              alert('Lỗi: ' + res.error);
+            }
+          });
+          actionRow.appendChild(deleteButton);
+        }
+
+        card.appendChild(actionRow);
+        discoverSourceList.appendChild(card);
+      }
+
+      // Render uploaded files
+      if (filesList && filesList.length > 0) {
+        for (const file of filesList) {
+          const card = document.createElement('div');
+          card.className = 'book-card';
+
+          // File cover image or icon
+          const cover = document.createElement('div');
+          cover.className = 'book-cover';
+          if (file.coverUrl) {
+            const img = document.createElement('img');
+            img.src = file.coverUrl;
+            img.alt = file.title;
+            img.onerror = () => {
+              const fileType = file.fileType || 'file';
+              const icon = fileType === 'pdf' ? '📄' : '📋';
+              cover.innerHTML = `<div class="cover-fallback" style="font-size:48px;">${icon}</div>`;
+            };
+            cover.appendChild(img);
+          } else {
+            const fileType = file.fileType || 'file';
+            const icon = fileType === 'pdf' ? '📄' : '📋';
+            cover.innerHTML = `<div class="cover-fallback" style="font-size:48px;">${icon}</div>`;
+          }
+          card.appendChild(cover);
+
+          const name = document.createElement('div');
+          name.className = 'book-name';
+          name.textContent = file.title || file.fileName;
+          card.appendChild(name);
+
+          const desc = document.createElement('div');
+          desc.className = 'book-desc';
+          const chapterText = file.chapterCount ? `${file.chapterCount} chương` : file.fileType.toUpperCase();
+          const uploadDate = new Date(file.uploadedAt).toLocaleDateString('vi-VN');
+          desc.textContent = `${chapterText} • ${uploadDate}`;
+          card.appendChild(desc);
+
+          const actionRow = document.createElement('div');
+          actionRow.className = 'book-actions';
+
+          // Download button for all users
+          const downloadButton = document.createElement('button');
+          downloadButton.type = 'button';
+          downloadButton.textContent = 'Tải về';
+          downloadButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const currentEmail = localStorage.getItem('currentUserEmail');
+            if (!currentEmail) {
+              alert('Vui lòng đăng nhập trước.');
+              return;
+            }
+            downloadButton.disabled = true;
+            try {
+              const result = await ipcRenderer.invoke('save-file-to-library', file.id, currentEmail);
+              if (result.ok) {
+                // refresh local books list and open the saved book in reader
+                books = await ipcRenderer.invoke('list-books');
+                renderAllLists();
+                if (result.book && result.book.id) {
+                  await openBook(result.book.id);
+                }
+              } else {
+                alert('Lỗi: ' + result.error);
+              }
+            } catch (e) {
+              alert('Lỗi: ' + e.message);
+            } finally {
+              downloadButton.disabled = false;
+            }
+          });
+          actionRow.appendChild(downloadButton);
+
+          // Delete button for admin only
+          if (isAuthenticated && currentUserRole === 'admin') {
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'delete';
+            deleteButton.textContent = 'Xóa';
+            deleteButton.addEventListener('click', async (event) => {
+              event.stopPropagation();
+              const currentEmail = localStorage.getItem('currentUserEmail');
+              const ok = confirm('Xác nhận xóa file này?');
+              if (!ok) return;
+              deleteButton.disabled = true;
+              try {
+                const result = await ipcRenderer.invoke('delete-file', file.id, currentEmail);
+                if (result.ok) {
+                  alert('Xóa thành công.');
+                  await loadUploadedFiles();
+                } else {
+                  alert('Lỗi: ' + result.error);
+                }
+              } catch (e) {
+                alert('Lỗi: ' + e.message);
+              } finally {
+                deleteButton.disabled = false;
+              }
+            });
+            actionRow.appendChild(deleteButton);
+          }
+
+          card.appendChild(actionRow);
+          discoverSourceList.appendChild(card);
+        }
+      }
+    }
+
+    async function loadCatalog() {
+      const dbUrl = firebaseUrlInput.value.trim() || DEFAULT_FIREBASE_DATABASE_URL;
+      try {
+        const result = await ipcRenderer.invoke('load-catalog', dbUrl);
+        if (result.ok) {
+          catalogBooks = result.books || [];
+          await loadUploadedFiles();
+          renderCatalog();
+        } else {
+          discoverUserEmpty.style.display = 'block';
+          discoverUserEmpty.innerHTML = `<div class="status">Lỗi: ${result.error}</div>`;
+        }
+      } catch (e) {
+        discoverUserEmpty.style.display = 'block';
+        discoverUserEmpty.innerHTML = `<div class="status">Lỗi: ${e.message}</div>`;
+      }
+    }
+
+    async function loadUploadedFiles() {
+      try {
+        const result = await ipcRenderer.invoke('list-files');
+        if (result.ok) {
+          filesList = result.files || [];
+        } else {
+          filesList = [];
+        }
+      } catch (e) {
+        filesList = [];
+      }
+    }
+
+    async function pullSingleBook(bookId) {
+      const dbUrl = firebaseUrlInput.value.trim() || DEFAULT_FIREBASE_DATABASE_URL;
+      const currentEmail = localStorage.getItem('currentUserEmail');
+      
+      if (!currentEmail) {
+        alert('Bạn cần đăng nhập để tải truyện.');
+        return;
+      }
+
+      const pullBtn = event?.target;
+      if (pullBtn) pullBtn.disabled = true;
+
+      try {
+        const result = await ipcRenderer.invoke('pull-single-book', dbUrl, bookId, currentEmail);
+        if (result.ok) {
+          // Add to local books
+          const existingIndex = books.findIndex(b => b.id === bookId);
+          if (existingIndex >= 0) {
+            books[existingIndex] = result.book;
+          } else {
+            books.push(result.book);
+          }
+          renderAllLists();
+          alert('Tải sách thành công!');
+        } else {
+          alert('Lỗi: ' + result.error);
+        }
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      } finally {
+        if (pullBtn) pullBtn.disabled = false;
+      }
+    }
+
+    async function adminDeleteRemoteBook(bookId) {
+      const dbUrl = firebaseUrlInput.value.trim() || DEFAULT_FIREBASE_DATABASE_URL;
+      const currentEmail = localStorage.getItem('currentUserEmail');
+      const result = await ipcRenderer.invoke('admin-delete-remote-book', dbUrl, bookId, currentEmail);
+      return result;
+    }
+
+    function renderDiscoverSources() {
+      if (!discoverSourceList || !discoverUserEmpty) return;
+      discoverSourceList.innerHTML = '';
+
+      if (!books.length) {
+        discoverUserEmpty.style.display = 'block';
+        discoverUserEmpty.innerHTML = '<div class="status">Hiện chưa có truyện admin quản lý. Admin hãy thêm truyện bằng Discover.</div>';
+        return;
+      }
+
+      discoverUserEmpty.style.display = 'none';
+
+      for (const book of books) {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+
+        const name = document.createElement('div');
+        name.className = 'book-name';
+        name.textContent = book.title || 'Truyện chưa có tên';
+        card.appendChild(name);
+
+        const desc = document.createElement('div');
+        desc.className = 'book-desc';
+        desc.textContent = `${book.chapterCount || 1} chương · nguồn: ${book.sourceUrl || 'không rõ'}`;
+        card.appendChild(desc);
+
+        const actionRow = document.createElement('div');
+        actionRow.className = 'book-actions';
+
+        const openButton = document.createElement('button');
+        openButton.type = 'button';
+        openButton.textContent = 'Mở truyện';
+        openButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          openBook(book.id);
+        });
+        actionRow.appendChild(openButton);
+
+        if (isAuthenticated && currentUserRole === 'admin') {
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'delete';
+          deleteButton.textContent = 'Xóa';
+          deleteButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            await deleteBook(book.id);
+            renderDiscoverSources();
+          });
+          actionRow.appendChild(deleteButton);
+        }
+
+        card.appendChild(actionRow);
+        discoverSourceList.appendChild(card);
+      }
+    }
+
+    function renderTranslation(rawText) {
+      readerText.innerHTML = '';
+      // If rawText looks like HTML, insert as HTML
+      const isHtml = /<\/?[a-z][\s\S]*>/i.test(rawText || '');
+      if (isHtml) {
+        readerText.innerHTML = rawText;
+        return;
+      }
+
+      const blocks = rawText
+        .replace(/\r\n/g, '\n')
+        .split(/\n{2,}/)
+        .map((block) => block.trim())
+        .filter(Boolean);
+
+      for (const block of blocks) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = block;
+        readerText.appendChild(paragraph);
+      }
+    }
+
+    function currentChapter() {
+      if (!activeBook || !activeBook.chapters?.length) return null;
+      return activeBook.chapters[currentChapterIndex] || activeBook.chapters[0];
+    }
+
+    function renderCurrentChapter() {
+      const chapter = currentChapter();
+      if (!activeBook || !chapter) return;
+
+      activeBookId = activeBook.id;
+      readerBookTitle.textContent = activeBook.title;
+      chapterTitle.textContent = chapter.title || `Chapter ${currentChapterIndex + 1}`;
+      readerMeta.textContent = `${formatDate(activeBook.createdAt)} · Nguồn: ${activeBook.sourceUrl}`;
+      pageLabel.textContent = `Chapter ${currentChapterIndex + 1} of ${activeBook.chapters.length}`;
+      prevChapterButton.disabled = currentChapterIndex <= 0;
+      nextChapterButton.disabled = currentChapterIndex >= activeBook.chapters.length - 1;
+      renderTranslation(chapter.text || activeBook.text || '');
+
+      const savedPercent = activeBook.readingProgress?.chapterIndex === currentChapterIndex
+        ? Number(activeBook.readingProgress.percent || 0)
+        : 0;
+      updateReaderProgress(savedPercent);
+      setTimeout(() => {
+        const maxScroll = readingArea.scrollHeight - readingArea.clientHeight;
+        readingArea.scrollTop = maxScroll > 0 ? (maxScroll * savedPercent) / 100 : 0;
+      }, 0);
+      renderAllLists();
+    }
+
+    function updateReaderProgress(percent) {
+      const value = Math.max(0, Math.min(100, Math.round(percent)));
+      readerProgressPercent.textContent = `${value}%`;
+    }
+
+    function calculateScrollPercent() {
+      const maxScroll = readingArea.scrollHeight - readingArea.clientHeight;
+      if (maxScroll <= 0) return 100;
+      return (readingArea.scrollTop / maxScroll) * 100;
+    }
+
+    function queueProgressSave() {
+      if (!activeBook) return;
+      const percent = calculateScrollPercent();
+      updateReaderProgress(percent);
+      activeBook.readingProgress = {
+        chapterIndex: currentChapterIndex,
+        percent,
+        bookmarked: Boolean(activeBook.readingProgress?.bookmarked)
+      };
+
+      clearTimeout(progressTimer);
+      progressTimer = setTimeout(async () => {
+        await ipcRenderer.invoke('save-reading-progress', {
+          id: activeBook.id,
+          chapterIndex: currentChapterIndex,
+          percent,
+          bookmarked: activeBook.readingProgress.bookmarked
+        });
+        books = await ipcRenderer.invoke('list-books');
+        renderAllLists();
+      }, 400);
+    }
+
+    function renderError(message) {
+      readerText.innerHTML = '';
+      const error = document.createElement('p');
+      error.style.color = '#b74d4d';
+      error.textContent = message;
+      readerText.appendChild(error);
+      showReader();
+    }
+
+    function showReader() {
+      homeScreen.classList.add('hidden');
+      readerScreen.style.display = 'grid';
+    }
+
+    function showHome() {
+      readerScreen.style.display = 'none';
+      homeScreen.classList.remove('hidden');
+      sidePanel.classList.add('hidden');
+      setTab(currentTab);
+    }
+
+    async function loadBooks() {
+      books = await ipcRenderer.invoke('list-books');
+      renderAllLists();
+    }
+
+    async function loadFirebaseConfig() {
+      const config = await ipcRenderer.invoke('get-firebase-config');
+      if (config && config.databaseUrl) {
+        firebaseUrlInput.value = config.databaseUrl;
+      }
+    }
+
+    async function openBook(id) {
+      const book = await ipcRenderer.invoke('get-book', id);
+      if (!book) return;
+
+      activeBook = book;
+      activeBookId = book.id;
+      currentChapterIndex = Math.min(
+        Math.max(0, book.readingProgress?.chapterIndex || 0),
+        Math.max(0, (book.chapters?.length || 1) - 1)
+      );
+      renderCurrentChapter();
+      showReader();
+    }
+
+    async function deleteBook(id) {
+      const targetId = id || activeBookId;
+      if (!targetId) return;
+
+      const ok = confirm("Bạn có chắc chắn muốn xóa quyển truyện này không?");
+      if (!ok) return;
+
+      books = await ipcRenderer.invoke('delete-book', targetId);
+
+      if (activeBookId === targetId) {
+        activeBook = null;
+        activeBookId = null;
+        currentChapterIndex = 0;
+        readerScreen.style.display = 'none';
+        homeScreen.classList.remove('hidden');
+        setTab('library');
+      }
+
+      renderAllLists();
+    }
+
+    ipcRenderer.on('automation-progress', (_event, payload) => {
+      setProgress(payload.message, payload.progress);
+    });
+
+    setupButton.addEventListener('click', async () => {
+      setupButton.disabled = true;
+      setTab('discover');
+      setProgress('Đang mở Chrome để đăng nhập Gemini...', 5);
+      const result = await ipcRenderer.invoke('setup-gemini-session');
+      if (!result.ok) renderError(result.error || 'Không mở được Gemini.');
+      setupButton.disabled = false;
+    });
+
+    const uploadFileButton = document.getElementById('uploadFileButton');
+    const fileUploadInput = document.getElementById('fileUploadInput');
+    const fileUploadTitle = document.getElementById('fileUploadTitle');
+    const fileUploadStatus = document.getElementById('fileUploadStatus');
+    const coverImageInput = document.getElementById('coverImageInput');
+    const chapterCountInput = document.getElementById('chapterCountInput');
+    const googleDocsLink = document.getElementById('googleDocsLink');
+    const googleDriveLink = document.getElementById('googleDriveLink');
+
+    // Helper to extract Google Docs ID
+    function extractGoogleDocsId(link) {
+      const match = link.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+      return match ? match[1] : null;
+    }
+
+    // Helper to extract Google Drive ID
+    function extractGoogleDriveId(link) {
+      const match = link.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) return match[1];
+      const match2 = link.match(/id=([a-zA-Z0-9-_]+)/);
+      return match2 ? match2[1] : null;
+    }
+
+    if (uploadFileButton) {
+      uploadFileButton.addEventListener('click', async () => {
+        const currentEmail = localStorage.getItem('currentUserEmail');
+
+        if (!currentEmail) {
+          fileUploadStatus.textContent = 'Vui lòng đăng nhập trước.';
+          return;
+        }
+
+        const hasLocalFile = fileUploadInput.files.length > 0;
+        const hasGoogleDocs = googleDocsLink.value.trim();
+        const hasGoogleDrive = googleDriveLink.value.trim();
+
+        if (!hasLocalFile && !hasGoogleDocs && !hasGoogleDrive) {
+          fileUploadStatus.textContent = 'Vui lòng chọn file hoặc paste Google link.';
+          return;
+        }
+
+        const title = fileUploadTitle.value.trim();
+        if (!title) {
+          fileUploadStatus.textContent = 'Vui lòng nhập tên file.';
+          return;
+        }
+
+        const chapterCount = parseInt(chapterCountInput.value) || 1;
+        let coverData = null;
+
+        // Read cover image if provided
+        if (coverImageInput.files.length > 0) {
+          const coverFile = coverImageInput.files[0];
+          coverData = await coverFile.arrayBuffer();
+          coverData = new Uint8Array(coverData);
+        }
+
+        uploadFileButton.disabled = true;
+        fileUploadStatus.textContent = 'Đang upload...';
+
+        try {
+          let result;
+
+          if (hasGoogleDocs) {
+            // Handle Google Docs upload
+            const docId = extractGoogleDocsId(hasGoogleDocs);
+            if (!docId) {
+              throw new Error('Link Google Docs không hợp lệ.');
+            }
+            result = await ipcRenderer.invoke('upload-from-google-docs', {
+              docId,
+              title,
+              chapterCount,
+              coverData,
+              coverFileName: coverImageInput.files.length > 0 ? coverImageInput.files[0].name : null,
+              currentEmail
+            });
+          } else if (hasGoogleDrive) {
+            // Handle Google Drive upload
+            const driveId = extractGoogleDriveId(hasGoogleDrive);
+            if (!driveId) {
+              throw new Error('Link Google Drive không hợp lệ.');
+            }
+            result = await ipcRenderer.invoke('upload-from-google-drive', {
+              driveId,
+              title,
+              chapterCount,
+              coverData,
+              coverFileName: coverImageInput.files.length > 0 ? coverImageInput.files[0].name : null,
+              currentEmail
+            });
+          } else {
+            // Handle local file upload
+            const file = fileUploadInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            result = await ipcRenderer.invoke('upload-file', {
+              fileName: file.name,
+              fileData: uint8Array,
+              title: title,
+              chapterCount: chapterCount,
+              coverData: coverData,
+              coverFileName: coverImageInput.files.length > 0 ? coverImageInput.files[0].name : null,
+              currentEmail
+            });
+          }
+
+          if (result.ok) {
+            fileUploadStatus.textContent = 'Upload thành công!';
+            fileUploadInput.value = '';
+            fileUploadTitle.value = '';
+            chapterCountInput.value = '';
+            coverImageInput.value = '';
+            googleDocsLink.value = '';
+            googleDriveLink.value = '';
+            await loadUploadedFiles();
+            renderCatalog();
+          } else {
+            fileUploadStatus.textContent = 'Lỗi: ' + result.error;
+          }
+        } catch (e) {
+          fileUploadStatus.textContent = 'Lỗi: ' + e.message;
+        } finally {
+          uploadFileButton.disabled = false;
+        }
+      });
+    }
+
+    runButton.addEventListener('click', async () => {
+      const selectedUrl = (urlInput && urlInput.value.trim()) || window.selectedDiscoverUrl || '';
+      if (!selectedUrl) {
+        setTab('discover');
+        setProgress('Vui lòng nhập link truyện trước khi tải.', 0);
+        return;
+      }
+
+      runButton.disabled = true;
+      setupButton.disabled = true;
+      setTab('discover');
+      setProgress('Bắt đầu tự động hóa...', 3);
+
+      try {
+        const debugMode = document.getElementById('debugCheckbox').checked;
+        const maxChaptersValue = document.getElementById('maxChaptersInput').value.trim();
+        const maxChapters = maxChaptersValue ? parseInt(maxChaptersValue, 10) : 10;
+        
+        const customTitle = document.getElementById('customTitleInput').value.trim();
+        const customCover = document.getElementById('customCoverInput').value.trim();
+        const extraPrompt = document.getElementById('extraPromptInput').value.trim();
+        
+        const result = await ipcRenderer.invoke('run-automation', selectedUrl, { 
+          maxChapters: maxChapters,
+          customTitle: customTitle,
+          customCover: customCover,
+          extraPrompt: extraPrompt
+
+        });
+
+        if (!result.ok) {
+          renderError(result.error || 'Tự động hóa thất bại.');
+          return;
+        }
+
+        books = result.books;
+        renderAllLists();
+        await openBook(result.book.id);
+        setProgress('Hoàn tất. Sách đã được lưu vào thư viện.', 100);
+      } catch (error) {
+        const message = error && error.message ? error.message : String(error);
+        renderError(message);
+        setProgress(`Lỗi: ${message}`, 0);
+      } finally {
+        runButton.disabled = false;
+        setupButton.disabled = false;
+      }
+    });
+
+    syncButton.addEventListener('click', async () => {
+      const dbUrl = firebaseUrlInput.value.trim();
+      const currentEmail = localStorage.getItem('currentUserEmail');
+
+      syncButton.disabled = true;
+      syncStatus.textContent = 'Đang đồng bộ lên đám mây...';
+      
+      try {
+        const result = await ipcRenderer.invoke('sync-to-firebase', dbUrl, currentEmail);
+        if (result.ok) {
+          syncStatus.textContent = 'Đồng bộ thành công! Bạn có thể xem truyện trên điện thoại.';
+        } else {
+          syncStatus.textContent = 'Lỗi: ' + result.error;
+        }
+      } catch (e) {
+        syncStatus.textContent = 'Lỗi kết nối: ' + e.message;
+      } finally {
+        syncButton.disabled = false;
+      }
+    });
+
+    pullButton.addEventListener('click', async () => {
+      const dbUrl = firebaseUrlInput.value.trim();
+      const currentEmail = localStorage.getItem('currentUserEmail');
+
+      pullButton.disabled = true;
+      syncStatus.textContent = 'Đang kéo dữ liệu từ đám mây về máy...';
+
+      try {
+        const result = await ipcRenderer.invoke('pull-from-firebase', dbUrl, currentEmail);
+        if (result.ok) {
+          books = result.books;
+          renderAllLists();
+          syncStatus.textContent = `Đã tải ${result.count} truyện từ Firebase.`;
+        } else {
+          syncStatus.textContent = 'Lỗi: ' + result.error;
+        }
+      } catch (e) {
+        syncStatus.textContent = 'Lỗi kết nối: ' + e.message;
+      } finally {
+        pullButton.disabled = false;
+      }
+    });
+
+    backButton.addEventListener('click', showHome);
+
+    prevChapterButton.addEventListener('click', () => {
+      if (!activeBook || currentChapterIndex <= 0) return;
+      currentChapterIndex -= 1;
+      renderCurrentChapter();
+      queueProgressSave();
+    });
+
+    nextChapterButton.addEventListener('click', () => {
+      if (!activeBook || currentChapterIndex >= activeBook.chapters.length - 1) return;
+      currentChapterIndex += 1;
+      renderCurrentChapter();
+      queueProgressSave();
+    });
+
+    readingArea.addEventListener('scroll', queueProgressSave);
+
+    nightButton.addEventListener('click', () => {
+      readingArea.classList.toggle('night');
+      nightButton.classList.toggle('active', readingArea.classList.contains('night'));
+    });
+
+    fontDownButton.addEventListener('click', () => {
+      fontMode = fontMode === 'large' ? 'normal' : 'small';
+      readingArea.classList.toggle('font-small', fontMode === 'small');
+      readingArea.classList.toggle('font-large', fontMode === 'large');
+    });
+
+    fontUpButton.addEventListener('click', () => {
+      fontMode = fontMode === 'small' ? 'normal' : 'large';
+      readingArea.classList.toggle('font-small', fontMode === 'small');
+      readingArea.classList.toggle('font-large', fontMode === 'large');
+    });
+
+    menuButton.addEventListener('click', () => renderToolPanel('toc'));
+    deleteReaderButton.addEventListener('click', () => deleteBook(activeBookId));
+
+    function renderToolPanel(tool) {
+      if (!activeBook) return;
+
+      sidePanel.classList.remove('hidden');
+
+      if (tool === 'toc') {
+        if (!isTbcSorting) {
+          sidePanel.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(124, 89, 52, 0.1); padding-bottom:8px; margin-bottom:12px;">
+              <h3 style="margin:0; font-size:1.1rem; color:#6f4829;">Mục lục</h3>
+              <button id="tocSortToggleBtn" style="padding:4px 8px; font-size:11px; border:1px solid rgba(124,89,52,0.2); background:#fff5df; color:#5f3826; border-radius:4px; font-weight:bold; cursor:pointer;">Sắp xếp</button>
+            </div>
+            <div class="panel-list"></div>
+          `;
+          
+          const list = sidePanel.querySelector('.panel-list');
+          activeBook.chapters.forEach((chapter, index) => {
+            const button = document.createElement('button');
+            button.className = index === currentChapterIndex ? 'active' : '';
+            button.textContent = chapter.title || `Chapter ${index + 1}`;
+            button.addEventListener('click', () => {
+              currentChapterIndex = index;
+              renderCurrentChapter();
+              queueProgressSave();
+            });
+            list.appendChild(button);
+          });
+
+          const sortBtn = document.getElementById('tocSortToggleBtn');
+          if (sortBtn) {
+            sortBtn.addEventListener('click', () => {
+              isTbcSorting = true;
+              tbcTempChapters = [...activeBook.chapters];
+              renderToolPanel('toc');
+            });
+          }
+        } else {
+          // Sorting mode UI
+          sidePanel.innerHTML = `
+            <div style="border-bottom: 2px solid rgba(124, 89, 52, 0.1); padding-bottom:8px; margin-bottom:12px;">
+              <h3 style="margin:0 0 8px 0; font-size:1.1rem; color:#6f4829;">Sắp xếp chương</h3>
+              <div style="display:flex; gap:4px; margin-bottom:8px;">
+                <button id="tocAutoNumBtn" style="flex:1; padding:3px 5px; font-size:10px; border:1px solid rgba(124,89,52,0.15); background:#fff5df; color:#5f3826; border-radius:4px; cursor:pointer;">Theo Số</button>
+                <button id="tocAutoAZBtn" style="flex:1; padding:3px 5px; font-size:10px; border:1px solid rgba(124,89,52,0.15); background:#fff5df; color:#5f3826; border-radius:4px; cursor:pointer;">A-Z</button>
+                <button id="tocAutoZABtn" style="flex:1; padding:3px 5px; font-size:10px; border:1px solid rgba(124,89,52,0.15); background:#fff5df; color:#5f3826; border-radius:4px; cursor:pointer;">Z-A</button>
+                <button id="tocAutoRevBtn" style="flex:1; padding:3px 5px; font-size:10px; border:1px solid rgba(124,89,52,0.15); background:#fff5df; color:#5f3826; border-radius:4px; cursor:pointer;">Đảo</button>
+              </div>
+            </div>
+            <div class="panel-list" id="tocSortingList" style="max-height: calc(100vh - 280px); overflow-y: auto; margin-bottom: 12px;"></div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button id="tocSaveBtn" style="flex:1; padding:6px 12px; font-size:12px; font-weight:bold; border:none; background:#ffdd56; color:#242423; border-radius:6px; cursor:pointer;">Lưu</button>
+              <button id="tocCancelBtn" style="flex:1; padding:6px 12px; font-size:12px; font-weight:bold; border:1px solid rgba(0,0,0,0.15); background:#fff; color:#333; border-radius:6px; cursor:pointer;">Hủy</button>
+            </div>
+          `;
+
+          const listContainer = document.getElementById('tocSortingList');
+
+          function renderSortingRows() {
+            listContainer.innerHTML = '';
+            tbcTempChapters.forEach((chapter, index) => {
+              const row = document.createElement('div');
+              row.style.display = 'flex';
+              row.style.justify = 'space-between';
+              row.style.alignItems = 'center';
+              row.style.padding = '6px 8px';
+              row.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+              row.style.gap = '6px';
+
+              const titleSpan = document.createElement('span');
+              titleSpan.style.fontSize = '12px';
+              titleSpan.style.fontWeight = '600';
+              titleSpan.style.whiteSpace = 'nowrap';
+              titleSpan.style.overflow = 'hidden';
+              titleSpan.style.textOverflow = 'ellipsis';
+              titleSpan.style.flex = '1';
+              titleSpan.style.color = '#2b2117';
+              titleSpan.textContent = chapter.title || `Chapter ${index + 1}`;
+
+              const btnWrap = document.createElement('div');
+              btnWrap.style.display = 'flex';
+              btnWrap.style.gap = '3px';
+              btnWrap.style.flexShrink = '0';
+
+              const up = document.createElement('button');
+              up.type = 'button';
+              up.textContent = '▲';
+              up.disabled = index === 0;
+              up.style.padding = '2px 4px';
+              up.style.fontSize = '9px';
+              up.style.cursor = index === 0 ? 'not-allowed' : 'pointer';
+              up.addEventListener('click', () => {
+                const tmp = tbcTempChapters[index];
+                tbcTempChapters[index] = tbcTempChapters[index - 1];
+                tbcTempChapters[index - 1] = tmp;
+                renderSortingRows();
+              });
+
+              const down = document.createElement('button');
+              down.type = 'button';
+              down.textContent = '▼';
+              down.disabled = index === tbcTempChapters.length - 1;
+              down.style.padding = '2px 4px';
+              down.style.fontSize = '9px';
+              down.style.cursor = index === tbcTempChapters.length - 1 ? 'not-allowed' : 'pointer';
+              down.addEventListener('click', () => {
+                const tmp = tbcTempChapters[index];
+                tbcTempChapters[index] = tbcTempChapters[index + 1];
+                tbcTempChapters[index + 1] = tmp;
+                renderSortingRows();
+              });
+
+              btnWrap.appendChild(up);
+              btnWrap.appendChild(down);
+              row.appendChild(titleSpan);
+              row.appendChild(btnWrap);
+              listContainer.appendChild(row);
+            });
+          }
+
+          renderSortingRows();
+
+          // Auto sort event listeners
+          function extractNumberFromTitle(title) {
+            const match = String(title || '').match(/\d+/);
+            return match ? parseInt(match[0], 10) : Infinity;
+          }
+
+          document.getElementById('tocAutoNumBtn').addEventListener('click', () => {
+            tbcTempChapters.sort((a, b) => {
+              const numA = extractNumberFromTitle(a.title || '');
+              const numB = extractNumberFromTitle(b.title || '');
+              if (numA !== numB) return numA - numB;
+              return (a.title || '').localeCompare(b.title || '');
+            });
+            renderSortingRows();
+          });
+
+          document.getElementById('tocAutoAZBtn').addEventListener('click', () => {
+            tbcTempChapters.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            renderSortingRows();
+          });
+
+          document.getElementById('tocAutoZABtn').addEventListener('click', () => {
+            tbcTempChapters.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+            renderSortingRows();
+          });
+
+          document.getElementById('tocAutoRevBtn').addEventListener('click', () => {
+            tbcTempChapters.reverse();
+            renderSortingRows();
+          });
+
+          // Action buttons listeners
+          document.getElementById('tocCancelBtn').addEventListener('click', () => {
+            isTbcSorting = false;
+            renderToolPanel('toc');
+          });
+
+          document.getElementById('tocSaveBtn').addEventListener('click', async () => {
+            const saveBtn = document.getElementById('tocSaveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '...';
+
+            const currentChapterId = activeBook.chapters[currentChapterIndex]?.id;
+
+            const res = await ipcRenderer.invoke('update-book-chapters', {
+              bookId: activeBook.id,
+              chapters: tbcTempChapters
+            });
+
+            if (res.ok) {
+              activeBook.chapters = tbcTempChapters;
+              if (currentChapterId) {
+                const newIdx = activeBook.chapters.findIndex(c => c.id === currentChapterId);
+                if (newIdx !== -1) {
+                  currentChapterIndex = newIdx;
+                }
+              }
+              isTbcSorting = false;
+              renderCurrentChapter();
+              renderToolPanel('toc');
+              if (typeof addLog === 'function') addLog('Đã lưu thứ tự mục lục mới.');
+            } else {
+              alert('Lỗi khi lưu mục lục: ' + res.error);
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Lưu';
+            }
+          });
+        }
+        return;
+      }
+
+      if (tool === 'font') {
+        sidePanel.innerHTML = `
+          <h3>Font</h3>
+          <div class="panel-list">
+            <button data-font="small">Small</button>
+            <button data-font="normal">Normal</button>
+            <button data-font="large">Large</button>
+          </div>
+        `;
+        sidePanel.querySelectorAll('[data-font]').forEach((button) => {
+          button.classList.toggle('active', button.dataset.font === fontMode);
+          button.addEventListener('click', () => {
+            fontMode = button.dataset.font;
+            readingArea.classList.toggle('font-small', fontMode === 'small');
+            readingArea.classList.toggle('font-large', fontMode === 'large');
+            renderToolPanel('font');
+          });
+        });
+        return;
+      }
+    }
+
+    runButton.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !runButton.disabled) runButton.click();
+    });
+
+    document.querySelectorAll('.bottom-nav button[data-tab]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        setTab(button.dataset.tab);
+        if (button.dataset.tab === 'discover') {
+          await loadCatalog();
+        } else if (button.dataset.tab === 'creator') {
+          await loadCreatorSelectBooks();
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-open-tab]').forEach((button) => {
+      button.addEventListener('click', () => setTab(button.dataset.openTab));
+    });
+
+    document.querySelectorAll('[data-open-latest]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (books[0]) openBook(books[0].id);
+        else setTab('discover');
+      });
+    });
+
+    function updateAuthTabLabels() {
+      authSignInTab.textContent = isAuthenticated ? 'Profile' : 'Đăng nhập';
+      authSignUpTab.textContent = 'Đăng ký';
+    }
+
+    function showAuthProfile() {
+      authMode = 'profile';
+      authSignInTab.classList.add('active');
+      authSignUpTab.classList.remove('active');
+      authHeaderTitle.textContent = 'Profile';
+      authGoogleBtnText.textContent = 'Google linked';
+      authMessage.textContent = currentUserRole === 'admin'
+        ? 'Bạn đang đăng nhập với quyền admin. Quản lý tài khoản và thư viện ở bên dưới.'
+        : 'Bạn đã đăng nhập. Quản lý hồ sơ và thư viện ở bên dưới.';
+      authUserInfo.style.display = 'flex';
+      signOutButton.style.display = 'block';
+      signInGoogleButton.style.display = 'none';
+      authFormFields.style.display = 'none';
+      if (authProfilePanel) authProfilePanel.classList.add('visible');
+      fillProfileForm(currentUser || {});
+      updateAdminInterface();
+      if (currentUserRole === 'admin') {
+        loadAdminUsers();
+      }
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      if (isAuthenticated) {
+        showAuthProfile();
+        return;
+      }
+
+      authSignInTab.classList.toggle('active', mode === 'signin');
+      authSignUpTab.classList.toggle('active', mode === 'signup');
+      authHeaderTitle.textContent = mode === 'signin' ? 'Sign In' : 'Create account';
+      authGoogleBtnText.textContent = mode === 'signin' ? 'Tiếp tục với Google' : 'Đăng ký bằng Google';
+      authActionButton.textContent = mode === 'signin' ? 'SIGN IN' : 'SIGN UP';
+      authMessage.textContent = mode === 'signin'
+        ? 'Dùng Google hoặc email để đăng nhập nhanh. Session Gemini sẽ được giữ lại trong Chrome profile riêng.'
+        : 'Tạo tài khoản cục bộ để lưu sách trên máy và đồng bộ Firebase khi bạn cần.';
+      authFormFields.style.display = 'grid';
+      authUserInfo.style.display = 'none';
+      signOutButton.style.display = 'none';
+      signInGoogleButton.style.display = 'block';
+      if (authProfilePanel) authProfilePanel.classList.remove('visible');
+      syncAuthEmailWithRememberMe();
+      loadChromeProfileStatus();
+    }
+
+    function openAuthModal(mode = 'signin') {
+      authModal.classList.remove('hidden');
+      loadChromeProfileStatus();
+      if (isAuthenticated) {
+        showAuthProfile();
+        return;
+      }
+      setAuthMode(mode);
+    }
+
+    authSignInTab.addEventListener('click', () => {
+      if (isAuthenticated) {
+        showAuthProfile();
+      } else {
+        setAuthMode('signin');
+      }
+    });
+    authSignUpTab.addEventListener('click', () => setAuthMode('signup'));
+    if (authSignUpButton) authSignUpButton.addEventListener('click', () => setAuthMode('signup'));
+    if (authSignUpButton2) authSignUpButton2.addEventListener('click', () => setAuthMode('signup'));
+    if (refreshChromeProfileButton) refreshChromeProfileButton.addEventListener('click', loadChromeProfileStatus);
+
+    profileButton.addEventListener('click', () => setTab('profile'));
+
+    if (tabProfileLoginButton) {
+      tabProfileLoginButton.addEventListener('click', () => openAuthModal('signin'));
+    }
+
+    authCloseButton.addEventListener('click', () => {
+      authModal.classList.add('hidden');
+    });
+
+    authModal.addEventListener('click', (event) => {
+      if (event.target === authModal) {
+        authModal.classList.add('hidden');
+      }
+    });
+
+    if (forgotPasswordButton) {
+      forgotPasswordButton.addEventListener('click', async () => {
+        const email = authEmailInput.value.trim();
+        if (!email) {
+          authMessage.textContent = 'Hãy nhập email trước khi đặt lại mật khẩu.';
+          return;
+        }
+
+        authMessage.textContent = 'Đang kiểm tra tài khoản...';
+        try {
+          const lookup = await ipcRenderer.invoke('auth-get-user', email);
+          if (!lookup.ok) {
+            authMessage.textContent = lookup.error || 'Không tìm thấy tài khoản.';
+            return;
+          }
+
+          if (lookup.user.provider === 'google') {
+            shell.openExternal('https://accounts.google.com/signin/recovery');
+            authMessage.textContent = 'Tài khoản Google được mở trong trình duyệt khôi phục.';
+            return;
+          }
+
+          const newPassword = window.prompt('Nhập mật khẩu mới (ít nhất 6 ký tự):', '');
+          if (!newPassword) return;
+          if (newPassword.length < 6) {
+            authMessage.textContent = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
+            return;
+          }
+
+          const confirmPassword = window.prompt('Nhập lại mật khẩu mới để xác nhận:', '');
+          if (confirmPassword !== newPassword) {
+            authMessage.textContent = 'Mật khẩu xác nhận không khớp.';
+            return;
+          }
+
+          const resetResult = await ipcRenderer.invoke('auth-reset-password', {
+            email,
+            password: newPassword
+          });
+
+          if (resetResult.ok) {
+            authMessage.textContent = 'Đã đặt lại mật khẩu. Bạn có thể đăng nhập ngay.';
+          } else {
+            authMessage.textContent = resetResult.error || 'Không thể đặt lại mật khẩu.';
+          }
+        } catch (error) {
+          authMessage.textContent = `Lỗi: ${error.message}`;
+        }
+      });
+    }
+
+    if (saveProfileButton) {
+      saveProfileButton.addEventListener('click', async () => {
+        if (!currentUser?.email) {
+          if (profileMessage) {
+            profileMessage.textContent = 'Bạn cần đăng nhập trước khi lưu profile.';
+            profileMessage.style.display = 'block';
+          }
+          return;
+        }
+
+        saveProfileButton.disabled = true;
+        if (profileMessage) {
+          profileMessage.textContent = 'Đang lưu profile...';
+          profileMessage.style.display = 'block';
+        }
+
+        try {
+          const result = await ipcRenderer.invoke('auth-update-profile', {
+            email: currentUser.email,
+            profile: profilePayloadFromForm()
+          });
+
+          if (result.ok) {
+            currentUser = result.user;
+            fillProfileForm(currentUser);
+            authName.textContent = currentUser.displayName || currentUser.email;
+            authEmail.textContent = `${currentUser.email} - ${currentUser.provider || 'local'}`;
+            if (profileMessage) {
+              profileMessage.textContent = 'Đã lưu profile.';
+              profileMessage.style.display = 'block';
+            }
+          } else {
+            if (profileMessage) {
+              profileMessage.textContent = result.error || 'Không thể lưu profile.';
+              profileMessage.style.display = 'block';
+            }
+          }
+        } catch (error) {
+          if (profileMessage) {
+            profileMessage.textContent = `Lỗi: ${error.message}`;
+            profileMessage.style.display = 'block';
+          }
+        } finally {
+          saveProfileButton.disabled = false;
+        }
+      });
+    }
+
+    authActionButton.addEventListener('click', async () => {
+      const email = authEmailInput.value.trim();
+      const password = authPasswordInput.value.trim();
+      
+      // Validate email format
+      if (!email) {
+        authMessage.textContent = 'Vui lòng nhập email.';
+        return;
+      }
+      
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (email !== 'admin' && !emailRegex.test(email)) {
+        authMessage.textContent = 'Email không hợp lệ.';
+        return;
+      }
+      
+      if (!password) {
+        authMessage.textContent = 'Vui lòng nhập mật khẩu.';
+        return;
+      }
+      
+      if (password.length < 6) {
+        authMessage.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.';
+        return;
+      }
+
+      authActionButton.disabled = true;
+      
+      try {
+        let result;
+        if (authSignUpTab.classList.contains('active')) {
+          authMessage.textContent = 'Đang tạo tài khoản...';
+          result = await ipcRenderer.invoke('auth-local-signup', email, password);
+          if (result.ok) {
+            authMessage.textContent = '✓ Tạo tài khoản thành công! Bạn đã đăng nhập.';
+            authEmailInput.value = '';
+            authPasswordInput.value = '';
+            rememberAuthEmail(email);
+            setAuthUser(result.user);
+          } else {
+            authMessage.textContent = '✗ ' + (result.error || 'Lỗi tạo tài khoản.');
+          }
+        } else {
+          authMessage.textContent = 'Đang đăng nhập...';
+          result = await ipcRenderer.invoke('auth-local-signin', email, password);
+          if (result.ok) {
+            authMessage.textContent = '✓ Đăng nhập thành công.';
+            authEmailInput.value = '';
+            authPasswordInput.value = '';
+            rememberAuthEmail(email);
+            setAuthUser(result.user);
+          } else {
+            authMessage.textContent = '✗ ' + (result.error || 'Lỗi đăng nhập.');
+          }
+        }
+      } catch (e) {
+        authMessage.textContent = '✗ Lỗi: ' + e.message;
+      } finally {
+        authActionButton.disabled = false;
+      }
+    });
+
+    signInGoogleButton.addEventListener('click', async () => {
+      signInGoogleButton.disabled = true;
+      authMessage.textContent = 'Đang mở Chrome để đăng nhập Google...';
+
+      try {
+        const result = await ipcRenderer.invoke('auth-google-signin');
+        if (result.ok) {
+          authMessage.textContent = '✓ Đăng nhập Google thành công.';
+          authEmailInput.value = '';
+          authPasswordInput.value = '';
+          rememberAuthEmail(result.user?.email || '');
+          setAuthUser(result.user);
+        } else {
+          authMessage.textContent = '✗ ' + (result.error || 'Lỗi đăng nhập Google. Vui lòng thử lại.');
+        }
+      } catch (e) {
+        authMessage.textContent = '✗ Lỗi: ' + e.message;
+      } finally {
+        signInGoogleButton.disabled = false;
+      }
+    });
+
+    if (signInFacebookButton) {
+      signInFacebookButton.addEventListener('click', async () => {
+        const email = (authEmailInput.value.trim() || window.prompt('Nhập email Facebook để liên kết tài khoản:', '') || '').trim();
+        if (!email) {
+          authMessage.textContent = 'Hãy nhập email Facebook trước khi đăng nhập.';
+          return;
+        }
+
+        signInFacebookButton.disabled = true;
+        authMessage.textContent = 'Đang mở Facebook để đăng nhập...';
+
+        try {
+          const result = await ipcRenderer.invoke('auth-facebook-signin', {
+            email,
+            displayName: profileDisplayNameInput?.value?.trim() || ''
+          });
+
+          if (result.ok) {
+            authMessage.textContent = 'Đăng nhập Facebook thành công.';
+            authEmailInput.value = '';
+            authPasswordInput.value = '';
+            rememberAuthEmail(result.user?.email || email);
+            setAuthUser(result.user);
+          } else {
+            authMessage.textContent = result.error || 'Không thể đăng nhập Facebook.';
+          }
+        } catch (error) {
+          authMessage.textContent = `Lỗi: ${error.message}`;
+        } finally {
+          signInFacebookButton.disabled = false;
+        }
+      });
+    }
+
+    signOutButton.addEventListener('click', async () => {
+      const result = await ipcRenderer.invoke('auth-signout');
+      if (result.ok) {
+        isAuthenticated = false;
+        currentUserRole = 'user';
+        currentUser = null;
+        updateAuthTabLabels();
+        setAuthMode('signin');
+        authUserInfo.style.display = 'none';
+        signOutButton.style.display = 'none';
+        signInGoogleButton.style.display = 'block';
+        authFormFields.style.display = 'grid';
+        if (authProfilePanel) authProfilePanel.classList.remove('visible');
+        adminPanel.classList.add('hidden');
+        clearUsersButton.classList.add('hidden');
+        profileButton.textContent = 'N';
+        localStorage.removeItem('currentUserEmail');
+        localStorage.removeItem('currentUserRole');
+        localStorage.removeItem('currentUserProvider');
+        updateDiscoverAccess();
+        renderProfileTab();
+      } else {
+        authMessage.textContent = 'Sign out error: ' + result.error;
+      }
+    });
+
+    clearUsersButton.addEventListener('click', async () => {
+      if (!confirm('This will delete all local user accounts permanently, except admin. Continue?')) return;
+      const currentEmail = localStorage.getItem('currentUserEmail');
+      const result = await ipcRenderer.invoke('auth-clear-users', currentEmail);
+      if (result.ok) {
+        authMessage.textContent = 'All non-admin users have been deleted.';
+        if (isAuthenticated) {
+          if (currentUserRole === 'admin') {
+            await loadAdminUsers();
+          }
+        }
+      } else {
+        authMessage.textContent = 'Error deleting users: ' + result.error;
+      }
+    });
+
+    refreshAdminUsersButton.addEventListener('click', async () => {
+      await loadAdminUsers();
+    });
+
+    if (manageUploadsButton) {
+      manageUploadsButton.addEventListener('click', async () => {
+        await loadCatalog();
+        setTab('discover');
+      });
+    }
+
+    function setAuthUser(user) {
+      isAuthenticated = true;
+      currentUser = user || {};
+      currentUserRole = user.role || 'user';
+      updateAuthTabLabels();
+      authName.textContent = user.displayName || user.email;
+      authEmail.textContent = `${user.email} - ${user.provider || 'local'}`;
+      profileButton.textContent = (user.displayName || user.email || 'N')[0].toUpperCase();
+      fillProfileForm(user);
+      localStorage.setItem('currentUserEmail', user.email);
+      localStorage.setItem('currentUserRole', currentUserRole);
+      localStorage.setItem('currentUserProvider', user.provider || 'local');
+      showAuthProfile();
+      updateAdminInterface();
+      updateDiscoverAccess();
+      loadCatalog();
+      if (currentUserRole === 'admin') {
+        loadAdminUsers();
+      }
+      if (authModal) {
+        authModal.classList.add('hidden');
+      }
+      renderProfileTab();
+    }
+
+    function updateDiscoverAccess() {
+      const isAdmin = isAuthenticated && currentUserRole === 'admin';
+      const discoverTab = document.querySelector('.bottom-nav button[data-tab="discover"]');
+      const cloudTab = document.querySelector('.bottom-nav button[data-tab="cloud"]');
+      const creatorTab = document.querySelector('.bottom-nav button[data-tab="creator"]');
+      
+      if (discoverTab) discoverTab.disabled = false;
+      if (cloudTab) cloudTab.disabled = !isAdmin;
+      if (creatorTab) {
+        creatorTab.style.display = isAdmin ? 'inline-flex' : 'none';
+      }
+      
+      // If a non-admin somehow is on the Cloud or Creator tab, send them to Discover
+      if (!isAdmin && (currentTab === 'cloud' || currentTab === 'creator')) {
+        setTab('discover');
+      }
+      if (discoverAdminControls && discoverUserEmpty) {
+        discoverAdminControls.classList.toggle('hidden', !isAdmin);
+        discoverUserEmpty.classList.toggle('hidden', isAdmin);
+      }
+      if (syncButton) {
+        syncButton.style.display = isAdmin ? 'inline-flex' : 'none';
+      }
+      if (pullButton) {
+        pullButton.style.display = isAuthenticated ? 'inline-flex' : 'none';
+      }
+    }
+
+    function updateAdminInterface() {
+      const isAdmin = isAuthenticated && currentUserRole === 'admin';
+      clearUsersButton.classList.toggle('hidden', !isAdmin);
+      adminPanel.classList.toggle('hidden', !isAdmin);
+    }
+
+    async function loadAdminUsers() {
+      const email = localStorage.getItem('currentUserEmail');
+      if (!email) return;
+
+      const result = await ipcRenderer.invoke('auth-admin-list-users', email);
+      if (!result.ok) {
+        authMessage.textContent = result.error;
+        return;
+      }
+
+      adminUserList.innerHTML = '';
+      if (result.users.length === 0) {
+        adminUserList.textContent = 'No users available.';
+        return;
+      }
+
+      result.users.forEach((user) => {
+        const row = document.createElement('div');
+        row.className = 'admin-user-row';
+
+        const label = document.createElement('span');
+        label.textContent = user.email;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'admin-delete-user';
+        deleteButton.type = 'button';
+        deleteButton.dataset.email = user.email;
+        deleteButton.textContent = 'Delete';
+
+        row.appendChild(label);
+        row.appendChild(deleteButton);
+
+        if (user.email.toLowerCase() === 'admin') {
+          deleteButton.disabled = true;
+          deleteButton.textContent = 'Protected';
+        } else {
+          deleteButton.addEventListener('click', async () => {
+            if (!confirm(`Delete user ${user.email}?`)) return;
+            const currentEmail = localStorage.getItem('currentUserEmail');
+            const deleteResult = await ipcRenderer.invoke('auth-admin-delete-user', user.email, currentEmail);
+            if (!deleteResult.ok) {
+              authMessage.textContent = deleteResult.error;
+            } else {
+              authMessage.textContent = `Deleted ${user.email}.`;
+              await loadAdminUsers();
+            }
+          });
+        }
+        adminUserList.appendChild(row);
+      });
+    }
+
+    // --- Creator Space Frontend JS ---
+    let currentCreatorChapters = [];
+    let isChaptersOrderDirty = false;
+
+    async function loadCreatorChapters() {
+      const select = document.getElementById('creatorBookSelect');
+      const board = document.getElementById('creatorChapterBoard');
+      if (!select || !board) return;
+
+      const bookId = select.value;
+      if (!bookId) {
+        board.innerHTML = '<div class="creator-empty">Chọn một quyển truyện để tải danh sách chương.</div>';
+        currentCreatorChapters = [];
+        isChaptersOrderDirty = false;
+        return;
+      }
+
+      board.innerHTML = '<div class="creator-empty">Đang tải danh sách chương...</div>';
+      isChaptersOrderDirty = false;
+
+      const res = await ipcRenderer.invoke('creator-list-chapters', { bookId });
+      if (res.ok) {
+        currentCreatorChapters = res.chapters || [];
+        renderCreatorChaptersList(bookId);
+      } else {
+        board.innerHTML = `<div class="creator-empty text-danger">Lỗi: ${res.error}</div>`;
+      }
+    }
+
+    function renderCreatorChaptersList(bookId) {
+      const board = document.getElementById('creatorChapterBoard');
+      if (!board) return;
+
+      if (currentCreatorChapters.length === 0) {
+        board.innerHTML = '<div class="creator-empty">Chưa có chương nào cho truyện này. Hãy đăng chương đầu tiên!</div>';
+        return;
+      }
+
+      board.innerHTML = '';
+
+      // Create toolbar
+      const toolbar = document.createElement('div');
+      toolbar.style.display = 'flex';
+      toolbar.style.justify = 'space-between';
+      toolbar.style.alignItems = 'center';
+      toolbar.style.marginBottom = '12px';
+      toolbar.style.gap = '8px';
+
+      const leftActions = document.createElement('div');
+      leftActions.style.display = 'flex';
+      leftActions.style.gap = '8px';
+
+      const sortNumBtn = document.createElement('button');
+      sortNumBtn.type = 'button';
+      sortNumBtn.textContent = 'Sắp số';
+      sortNumBtn.style.padding = '5px 10px';
+      sortNumBtn.style.fontSize = '12px';
+      sortNumBtn.style.cursor = 'pointer';
+      sortNumBtn.style.borderRadius = '6px';
+      sortNumBtn.style.border = '1px solid rgba(124, 89, 52, 0.2)';
+      sortNumBtn.style.background = '#fff5df';
+      sortNumBtn.style.color = '#5f3826';
+      sortNumBtn.style.fontWeight = 'bold';
+      sortNumBtn.addEventListener('click', () => {
+        currentCreatorChapters.sort((a, b) => (Number(a.chapterNumber) || 0) - (Number(b.chapterNumber) || 0));
+        isChaptersOrderDirty = true;
+        renderCreatorChaptersList(bookId);
+      });
+
+      const reverseBtn = document.createElement('button');
+      reverseBtn.type = 'button';
+      reverseBtn.textContent = 'Đảo ngược';
+      reverseBtn.style.padding = '5px 10px';
+      reverseBtn.style.fontSize = '12px';
+      reverseBtn.style.cursor = 'pointer';
+      reverseBtn.style.borderRadius = '6px';
+      reverseBtn.style.border = '1px solid rgba(124, 89, 52, 0.2)';
+      reverseBtn.style.background = '#fff5df';
+      reverseBtn.style.color = '#5f3826';
+      reverseBtn.style.fontWeight = 'bold';
+      reverseBtn.addEventListener('click', () => {
+        currentCreatorChapters.reverse();
+        isChaptersOrderDirty = true;
+        renderCreatorChaptersList(bookId);
+      });
+
+      leftActions.appendChild(sortNumBtn);
+      leftActions.appendChild(reverseBtn);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.textContent = 'Lưu thứ tự';
+      saveBtn.style.padding = '6px 12px';
+      saveBtn.style.fontSize = '12px';
+      saveBtn.style.cursor = 'pointer';
+      saveBtn.style.borderRadius = '6px';
+      saveBtn.style.border = 'none';
+      saveBtn.style.background = '#ffdd56';
+      saveBtn.style.color = '#242423';
+      saveBtn.style.fontWeight = 'bold';
+      saveBtn.style.display = isChaptersOrderDirty ? 'block' : 'none';
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Đang lưu...';
+        const res = await ipcRenderer.invoke('creator-update-chapters-order', {
+          bookId,
+          chapterIds: currentCreatorChapters.map(c => c.id),
+          currentEmail: localStorage.getItem('currentUserEmail')
+        });
+        if (res.ok) {
+          isChaptersOrderDirty = false;
+          await loadCreatorChapters();
+        } else {
+          alert('Lỗi: ' + res.error);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Lưu thứ tự';
+        }
+      });
+
+      toolbar.appendChild(leftActions);
+      toolbar.appendChild(saveBtn);
+      board.appendChild(toolbar);
+
+      // Create group & list
+      const group = document.createElement('div');
+      group.className = 'creator-book-group';
+
+      const header = document.createElement('div');
+      header.className = 'creator-book-header';
+      header.innerHTML = `<strong>Danh sách chương</strong> <span>${currentCreatorChapters.length} chương</span>`;
+      group.appendChild(header);
+
+      const list = document.createElement('div');
+      list.className = 'creator-chapter-list';
+
+      currentCreatorChapters.forEach((chapter, index) => {
+        const row = document.createElement('div');
+        row.className = 'creator-chapter-row';
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'creator-chapter-num';
+        numSpan.textContent = `Chương ${chapter.chapterNumber}`;
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'creator-chapter-title';
+        
+        let typeBadge = '[Văn bản]';
+        const link = chapter.contentUrlOrLink || '';
+        if (link.startsWith('file://')) {
+          typeBadge = '[Tập tin]';
+        } else if (link.includes('docs.google.com')) {
+          typeBadge = '[Google Docs]';
+        } else if (link.includes('drive.google.com')) {
+          typeBadge = '[Google Drive]';
+        } else if (link) {
+          typeBadge = '[Liên kết]';
+        }
+        titleSpan.textContent = `${chapter.chapterName} `;
+        const badge = document.createElement('small');
+        badge.style.color = '#796b5d';
+        badge.style.marginLeft = '6px';
+        badge.style.fontSize = '10px';
+        badge.style.padding = '2px 4px';
+        badge.style.background = 'rgba(124, 89, 52, 0.08)';
+        badge.style.borderRadius = '3px';
+        badge.style.fontWeight = 'normal';
+        badge.textContent = typeBadge;
+        titleSpan.appendChild(badge);
+
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '6px';
+        actions.style.alignItems = 'center';
+
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.innerHTML = '▲';
+        upBtn.disabled = index === 0;
+        upBtn.style.padding = '3px 6px';
+        upBtn.style.cursor = index === 0 ? 'not-allowed' : 'pointer';
+        upBtn.style.border = '1px solid rgba(124,89,52,0.15)';
+        upBtn.style.background = '#fff';
+        upBtn.style.borderRadius = '4px';
+        upBtn.addEventListener('click', () => {
+          const temp = currentCreatorChapters[index];
+          currentCreatorChapters[index] = currentCreatorChapters[index - 1];
+          currentCreatorChapters[index - 1] = temp;
+          isChaptersOrderDirty = true;
+          renderCreatorChaptersList(bookId);
+        });
+
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.innerHTML = '▼';
+        downBtn.disabled = index === currentCreatorChapters.length - 1;
+        downBtn.style.padding = '3px 6px';
+        downBtn.style.cursor = index === currentCreatorChapters.length - 1 ? 'not-allowed' : 'pointer';
+        downBtn.style.border = '1px solid rgba(124,89,52,0.15)';
+        downBtn.style.background = '#fff';
+        downBtn.style.borderRadius = '4px';
+        downBtn.addEventListener('click', () => {
+          const temp = currentCreatorChapters[index];
+          currentCreatorChapters[index] = currentCreatorChapters[index + 1];
+          currentCreatorChapters[index + 1] = temp;
+          isChaptersOrderDirty = true;
+          renderCreatorChaptersList(bookId);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.innerHTML = '🗑';
+        delBtn.style.padding = '3px 6px';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.border = '1px solid rgba(183, 77, 77, 0.3)';
+        delBtn.style.background = '#fff0f0';
+        delBtn.style.color = '#b74d4d';
+        delBtn.style.borderRadius = '4px';
+        delBtn.addEventListener('click', async () => {
+          if (!confirm(`Bạn có chắc muốn xóa Chương ${chapter.chapterNumber}: ${chapter.chapterName}?`)) return;
+          delBtn.disabled = true;
+          const res = await ipcRenderer.invoke('creator-delete-chapter', {
+            chapterId: chapter.id,
+            currentEmail: localStorage.getItem('currentUserEmail')
+          });
+          if (res.ok) {
+            await loadCreatorChapters();
+          } else {
+            alert('Lỗi: ' + res.error);
+            delBtn.disabled = false;
+          }
+        });
+
+        actions.appendChild(upBtn);
+        actions.appendChild(downBtn);
+        actions.appendChild(delBtn);
+
+        row.appendChild(numSpan);
+        row.appendChild(titleSpan);
+        row.appendChild(actions);
+        list.appendChild(row);
+      });
+
+      group.appendChild(list);
+      board.appendChild(group);
+    }
+
+    async function loadCreatorSelectBooks() {
+      const select = document.getElementById('creatorBookSelect');
+      if (!select) return;
+
+      // Add change listener if not already attached
+      if (!select.dataset.listenerAttached) {
+        select.addEventListener('change', loadCreatorChapters);
+        select.dataset.listenerAttached = 'true';
+      }
+
+      const res = await ipcRenderer.invoke('creator-list-books');
+      if (res.ok) {
+        select.innerHTML = '<option value="">-- Chọn quyển truyện --</option>';
+        res.books.forEach(book => {
+          const opt = document.createElement('option');
+          opt.value = book.id;
+          opt.textContent = book.title;
+          select.appendChild(opt);
+        });
+      }
+
+      // Also reset/update chapters list based on selection
+      await loadCreatorChapters();
+    }
+
+    function setupImagePreview(urlInputId, fileInputId, previewContainerId) {
+      const urlInput = document.getElementById(urlInputId);
+      const fileInput = document.getElementById(fileInputId);
+      const container = document.getElementById(previewContainerId);
+      
+      function showPreview(src) {
+        container.innerHTML = '';
+        if (src) {
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = 'Preview';
+          container.appendChild(img);
+        } else {
+          container.innerHTML = '<span>No image</span>';
+        }
+      }
+
+      urlInput.addEventListener('input', () => {
+        const val = urlInput.value.trim();
+        if (val) {
+          showPreview(val);
+          fileInput.value = '';
+        } else {
+          showPreview(null);
+        }
+      });
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            showPreview(e.target.result);
+            urlInput.value = '';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          showPreview(null);
+        }
+      });
+    }
+
+    // File name display for chapter content
+    const chapterFileInput = document.getElementById('chapterFileInput');
+    const chapterFileLabel = document.getElementById('chapterFileLabel');
+    if (chapterFileInput && chapterFileLabel) {
+      chapterFileInput.addEventListener('change', () => {
+        const file = chapterFileInput.files[0];
+        if (file) {
+          chapterFileLabel.textContent = `📁 File: ${file.name}`;
+          document.getElementById('chapterContentUrlInput').value = '';
+        } else {
+          chapterFileLabel.textContent = '📁 Chọn file tài liệu từ máy (.txt, .docx, .doc, .pdf)...';
+        }
+      });
+      document.getElementById('chapterContentUrlInput').addEventListener('input', () => {
+        if (document.getElementById('chapterContentUrlInput').value.trim()) {
+          chapterFileInput.value = '';
+          chapterFileLabel.textContent = '📁 Chọn file tài liệu từ máy (.txt, .docx, .doc, .pdf)...';
+        }
+      });
+    }
+
+    // Setup image previews
+    setupImagePreview('bookCoverUrlInput', 'bookCoverFileInput', 'bookCoverPreviewContainer');
+    setupImagePreview('chapterIllustUrlInput', 'chapterIllustFileInput', 'chapterIllustPreviewContainer');
+
+    // Create Book button listener
+    const createBookButton = document.getElementById('createBookButton');
+    if (createBookButton) {
+      createBookButton.addEventListener('click', async () => {
+        const title = document.getElementById('bookTitleInput').value.trim();
+        const description = document.getElementById('bookDescInput').value.trim();
+        const coverUrl = document.getElementById('bookCoverUrlInput').value.trim();
+        const coverFileInput = document.getElementById('bookCoverFileInput');
+        const status = document.getElementById('createBookStatus');
+        
+        status.className = 'creator-status-bar';
+        status.textContent = '';
+        
+        if (!title) {
+          status.textContent = 'Vui lòng nhập tên truyện.';
+          status.classList.add('error');
+          return;
+        }
+        
+        createBookButton.disabled = true;
+        status.textContent = 'Đang xử lý...';
+        status.classList.add('success');
+        
+        try {
+          let coverData = null;
+          let coverFileName = null;
+          
+          if (coverFileInput.files.length > 0) {
+            const file = coverFileInput.files[0];
+            coverFileName = file.name;
+            const buffer = await file.arrayBuffer();
+            coverData = new Uint8Array(buffer);
+          }
+          
+          const result = await ipcRenderer.invoke('creator-create-book', {
+            title,
+            description,
+            coverUrl,
+            coverFileName,
+            coverData,
+            currentEmail: localStorage.getItem('currentUserEmail')
+          });
+          
+          if (result.ok) {
+            status.textContent = '✓ Tạo truyện mới thành công!';
+            status.className = 'creator-status-bar success';
+            
+            // Clear form
+            document.getElementById('bookTitleInput').value = '';
+            document.getElementById('bookDescInput').value = '';
+            document.getElementById('bookCoverUrlInput').value = '';
+            coverFileInput.value = '';
+            document.getElementById('bookCoverPreviewContainer').innerHTML = '<span>No image</span>';
+            
+            await loadCreatorSelectBooks();
+          } else {
+            status.textContent = `✗ Lỗi: ${result.error}`;
+            status.className = 'creator-status-bar error';
+          }
+        } catch (err) {
+          status.textContent = `✗ Lỗi: ${err.message}`;
+          status.className = 'creator-status-bar error';
+        } finally {
+          createBookButton.disabled = false;
+        }
+      });
+    }
+
+    // Publish Chapter button listener
+    const publishChapterButton = document.getElementById('publishChapterButton');
+    if (publishChapterButton) {
+      publishChapterButton.addEventListener('click', async () => {
+        const bookId = document.getElementById('creatorBookSelect').value;
+        const chapterNumberStr = document.getElementById('chapterNumInput').value;
+        const chapterName = document.getElementById('chapterNameInput').value.trim();
+        const contentUrlOrLink = document.getElementById('chapterContentUrlInput').value.trim();
+        const chapterFileInput = document.getElementById('chapterFileInput');
+        const imageUrl = document.getElementById('chapterIllustUrlInput').value.trim();
+        const chapterIllustFileInput = document.getElementById('chapterIllustFileInput');
+        const status = document.getElementById('publishChapterStatus');
+        
+        status.className = 'creator-status-bar';
+        status.textContent = '';
+        
+        if (!bookId) {
+          status.textContent = 'Vui lòng chọn quyển truyện.';
+          status.classList.add('error');
+          return;
+        }
+        if (!chapterNumberStr) {
+          status.textContent = 'Vui lòng nhập số chương.';
+          status.classList.add('error');
+          return;
+        }
+        const chapterNumber = parseInt(chapterNumberStr, 10);
+        if (!chapterName) {
+          status.textContent = 'Vui lòng nhập tên chương.';
+          status.classList.add('error');
+          return;
+        }
+        
+        const hasFile = chapterFileInput.files.length > 0;
+        if (!contentUrlOrLink && !hasFile) {
+          status.textContent = 'Vui lòng chọn file nội dung hoặc dán link bản thảo.';
+          status.classList.add('error');
+          return;
+        }
+        
+        publishChapterButton.disabled = true;
+        status.textContent = 'Đang đăng chương...';
+        status.classList.add('success');
+        
+        try {
+          let fileData = null;
+          let fileName = null;
+          if (hasFile) {
+            const file = chapterFileInput.files[0];
+            fileName = file.name;
+            const buffer = await file.arrayBuffer();
+            fileData = new Uint8Array(buffer);
+          }
+          
+          let imageData = null;
+          let imageFileName = null;
+          if (chapterIllustFileInput.files.length > 0) {
+            const file = chapterIllustFileInput.files[0];
+            imageFileName = file.name;
+            const buffer = await file.arrayBuffer();
+            imageData = new Uint8Array(buffer);
+          }
+          
+          const result = await ipcRenderer.invoke('creator-add-chapter', {
+            bookId,
+            chapterNumber,
+            chapterName,
+            contentUrlOrLink,
+            fileData,
+            fileName,
+            imageUrl,
+            imageData,
+            imageFileName,
+            currentEmail: localStorage.getItem('currentUserEmail')
+          });
+          
+          if (result.ok) {
+            status.textContent = '✓ Xuất bản chương thành công!';
+            status.className = 'creator-status-bar success';
+            
+            // Clear form
+            document.getElementById('chapterNumInput').value = '';
+            document.getElementById('chapterNameInput').value = '';
+            document.getElementById('chapterContentUrlInput').value = '';
+            chapterFileInput.value = '';
+            document.getElementById('chapterFileLabel').textContent = '📁 Chọn file tài liệu từ máy (.txt, .docx, .doc, .pdf)...';
+            document.getElementById('chapterIllustUrlInput').value = '';
+            chapterIllustFileInput.value = '';
+            document.getElementById('chapterIllustPreviewContainer').innerHTML = '<span>No image</span>';
+            
+            // Reload chapters
+            await loadCreatorChapters();
+          } else {
+            status.textContent = `✗ Lỗi: ${result.error}`;
+            status.className = 'creator-status-bar error';
+          }
+        } catch (err) {
+          status.textContent = `✗ Lỗi: ${err.message}`;
+          status.className = 'creator-status-bar error';
+        } finally {
+          publishChapterButton.disabled = false;
+        }
+      });
+    }
+
+    // Push to Discovery button listener
+    const pushToDiscoveryButton = document.getElementById('pushToDiscoveryButton');
+    if (pushToDiscoveryButton) {
+      pushToDiscoveryButton.addEventListener('click', async () => {
+        const bookId = document.getElementById('creatorBookSelect').value;
+        const status = document.getElementById('publishChapterStatus');
+        const currentEmail = localStorage.getItem('currentUserEmail');
+        
+        status.className = 'creator-status-bar';
+        status.textContent = '';
+        
+        if (!bookId) {
+          status.textContent = 'Vui lòng chọn quyển truyện muốn đẩy lên Discovery.';
+          status.classList.add('error');
+          return;
+        }
+        
+        pushToDiscoveryButton.disabled = true;
+        status.textContent = 'Đang xử lý đẩy truyện lên Discovery...';
+        status.classList.add('success');
+        
+        try {
+          const result = await ipcRenderer.invoke('creator-push-to-discovery', {
+            bookId,
+            currentEmail
+          });
+          
+          if (result.ok) {
+            status.textContent = `✓ Đẩy truyện lên Discovery thành công! Đã đồng bộ lên Firebase.`;
+            status.className = 'creator-status-bar success';
+            await loadCatalog();
+          } else {
+            status.textContent = `✗ Lỗi: ${result.error}`;
+            status.className = 'creator-status-bar error';
+          }
+        } catch (err) {
+          status.textContent = `✗ Lỗi: ${err.message}`;
+          status.className = 'creator-status-bar error';
+        } finally {
+          pushToDiscoveryButton.disabled = false;
+        }
+      });
+    }
+
+    async function loadLocalAuthState() {
+      const email = localStorage.getItem('currentUserEmail');
+      const role = localStorage.getItem('currentUserRole') || 'user';
+      const provider = localStorage.getItem('currentUserProvider') || 'local';
+      if (email) {
+        try {
+          const result = await ipcRenderer.invoke('auth-get-user', email);
+          setAuthUser(result.ok ? result.user : { email, role, provider });
+        } catch {
+          setAuthUser({ email, role, provider });
+        }
+        authMessage.textContent = 'Phiên đăng nhập đã được khôi phục.';
+        updateAuthTabLabels();
+      } else {
+        renderProfileTab();
+      }
+    }
+
+    loadLocalAuthState();
+    loadChromeProfileStatus();
+
+    loadBooks();
+    loadFirebaseConfig();
+  </script>
+</body>
+</html>
