@@ -249,10 +249,10 @@ async function autoSyncAllData() {
   try {
     const base = getFirebaseDatabaseUrl();
     const books = readBooks().map(normalizeBook);
-    const users = (await fetchUsers()).map(publicUserRecord);
-    const payload = { updatedAt: new Date().toISOString(), books, users };
-    await firebaseRequest(base, 'novelReader', { method: 'PUT', body: JSON.stringify(payload) });
-    writeJson(FIREBASE_CONFIG_FILE, { databaseUrl: base, lastSyncAt: payload.updatedAt });
+    const updatedAt = new Date().toISOString();
+    await firebaseRequest(base, 'novelReader/books', { method: 'PUT', body: JSON.stringify(books) });
+    await firebaseRequest(base, 'novelReader/updatedAt', { method: 'PUT', body: JSON.stringify(updatedAt) });
+    writeJson(FIREBASE_CONFIG_FILE, { databaseUrl: base, lastSyncAt: updatedAt });
     console.log('autoSync OK');
   } catch (e) { console.warn('autoSync failed:', e.message); }
 }
@@ -523,11 +523,11 @@ async function handleIpc(channel, args) {
       await requireAdmin(currentEmail);
       const base = normalizeFirebaseUrl(rawUrl || DEFAULT_FIREBASE_DATABASE_URL);
       const books = readBooks().map(normalizeBook);
-      const users = (await fetchUsers()).map(publicUserRecord);
-      const payload = { updatedAt: new Date().toISOString(), books, users };
-      await firebaseRequest(base, 'novelReader', { method: 'PUT', body: JSON.stringify(payload) });
-      writeJson(FIREBASE_CONFIG_FILE, { databaseUrl: base, lastSyncAt: payload.updatedAt });
-      return { ok: true, count: books.length, updatedAt: payload.updatedAt };
+      const updatedAt = new Date().toISOString();
+      await firebaseRequest(base, 'novelReader/books', { method: 'PUT', body: JSON.stringify(books) });
+      await firebaseRequest(base, 'novelReader/updatedAt', { method: 'PUT', body: JSON.stringify(updatedAt) });
+      writeJson(FIREBASE_CONFIG_FILE, { databaseUrl: base, lastSyncAt: updatedAt });
+      return { ok: true, count: books.length, updatedAt };
     }
 
     case 'pull-from-firebase': {
