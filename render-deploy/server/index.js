@@ -12,6 +12,7 @@ const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
 const multer = require('multer');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const server = http.createServer(app);
@@ -277,6 +278,69 @@ async function downloadFromUrl(url) {
   });
 }
 
+function extractGoogleDriveIdFromLink(link) {
+  const raw = String(link || '').trim();
+  const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/) || raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : raw;
+}
+
+function extractGoogleDriveFolderIdFromLink(link) {
+  const raw = String(link || '').trim();
+  const match = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : '';
+}
+
+async function resolveGoogleDrivePdfBuffer(link) {
+  const folderId = extractGoogleDriveFolderIdFromLink(link);
+  let driveId = extractGoogleDriveIdFromLink(link);
+
+  if (folderId) {
+    const folderHtml = (await downloadFromUrl(`https://drive.google.com/embeddedfolderview?id=${folderId}`)).toString('utf8');
+    const fileMatches = [...folderHtml.matchAll(/\/file\/d\/([a-zA-Z0-9_-]+)/g)].map(match => match[1]);
+    driveId = Array.from(new Set(fileMatches))[0] || '';
+    if (!driveId) {
+      throw new Error('Khong tim thay file PDF trong folder. Hay bat folder public hoac dan link truc tiep cua file PDF.');
+    }
+  }
+
+  if (!driveId) throw new Error('Link Google Drive khong hop le.');
+  const fileBuffer = await downloadFromUrl(`https://drive.google.com/uc?export=download&id=${driveId}`);
+  const looksLikePdf = fileBuffer.length > 5 && fileBuffer.slice(0, 5).toString('utf8') === '%PDF-';
+  if (!looksLikePdf) {
+    throw new Error('Khong tai duoc file PDF. Hay dam bao link la file PDF public hoac folder public co file PDF.');
+  }
+  return { fileBuffer, driveId };
+}
+
+function splitPlainTextIntoChapters(text, chapterCount = 1) {
+  const count = Math.max(1, Number(chapterCount) || 1);
+  const cleaned = String(text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!cleaned) return [];
+  const paragraphs = cleaned.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+  const targetLength = Math.ceil(cleaned.length / count);
+  const chapters = [];
+  let current = [];
+  let currentLength = 0;
+
+  for (const paragraph of paragraphs) {
+    if (chapters.length < count - 1 && current.length && currentLength + paragraph.length > targetLength) {
+      chapters.push(current.join('\n\n'));
+      current = [];
+      currentLength = 0;
+    }
+    current.push(paragraph);
+    currentLength += paragraph.length + 2;
+  }
+  if (current.length) chapters.push(current.join('\n\n'));
+
+  return chapters.map((chapterText, index) => ({
+    id: `chapter-${index + 1}`,
+    title: `Chapter ${index + 1}`,
+    text: chapterText,
+    sourceText: chapterText
+  }));
+}
+
 // ── WebSocket broadcast ───────────────────────────────────────────────────────
 function broadcast(msg) {
   const s = JSON.stringify(msg);
@@ -402,7 +466,7 @@ async function handleIpc(channel, args) {
 
     // ── BOOKS ───────────────────────────────────────────────────────────────
     case 'list-books':
-      return { ok: true, books: readBooks().map(publicBookMeta) };
+      return readBooks().map(publicBookMeta);
 
     case 'get-book': {
       const [id] = args;
@@ -421,9 +485,10 @@ async function handleIpc(channel, args) {
 
     case 'save-reading-progress': {
       const [payload = {}] = args;
-      const { bookId, chapterIndex, percent } = payload;
+      const { id, bookId, chapterIndex, percent } = payload;
+      const targetBookId = bookId || id;
       const books = readBooks();
-      const idx = books.findIndex(b => b.id === String(bookId));
+      const idx = books.findIndex(b => b.id === String(targetBookId));
       if (idx !== -1) {
         books[idx].readingProgress = { chapterIndex: chapterIndex ?? 0, percent: percent ?? 0, bookmarked: books[idx].readingProgress?.bookmarked ?? false };
         writeBooks(books);
@@ -472,6 +537,59 @@ async function handleIpc(channel, args) {
     case 'save-file-to-library': {
       // On web, files are managed via Firebase directly; stub for compatibility
       return { ok: false, error: 'Tính năng này yêu cầu desktop app để xử lý file cục bộ.' };
+    }
+
+    case 'push-google-drive-pdf-book': {
+      const [payload = {}] = args;
+      const { driveLink, title, chapterCount, currentEmail } = payload;
+      await requireAdmin(currentEmail);
+
+      const bookTitle = String(title || '').trim();
+      if (!bookTitle) throw new Error('Vui long nhap ten truyen.');
+
+      const { fileBuffer, driveId } = await resolveGoogleDrivePdfBuffer(driveLink);
+      const pdfResult = await pdfParse(fileBuffer);
+      const extractedText = String(pdfResult?.text || '').replace(/\r\n/g, '\n').trim();
+      if (!extractedText || extractedText.length < 50) {
+        throw new Error('PDF nay khong co text de trich xuat. Neu PDF la anh scan, can OCR truoc.');
+      }
+
+      const chapters = splitPlainTextIntoChapters(extractedText, chapterCount);
+      if (!chapters.length) throw new Error('Khong chia duoc noi dung PDF thanh chuong.');
+
+      const now = new Date();
+      const book = normalizeBook({
+        id: String(now.getTime()),
+        title: bookTitle,
+        sourceUrl: `https://drive.google.com/file/d/${driveId}/view`,
+        coverUrl: '',
+        images: [],
+        chapters,
+        readingProgress: { chapterIndex: 0, percent: 0, bookmarked: false },
+        sourceLength: extractedText.length,
+        translatedLength: extractedText.length,
+        createdAt: now.toISOString(),
+        text: chapters.map(c => c.text || '').join('\n\n')
+      });
+
+      const localBooks = readBooks();
+      localBooks.unshift(book);
+      writeBooks(localBooks);
+
+      const base = getFirebaseDatabaseUrl();
+      const data = await firebaseRequest(base, 'novelReader', { method: 'GET' }) || {};
+      const remoteBooks = Array.isArray(data?.books) ? data.books : [];
+      remoteBooks.unshift(book);
+      const updatedAt = new Date().toISOString();
+      await firebaseRequest(base, 'novelReader', { method: 'PUT', body: JSON.stringify({ ...data, updatedAt, books: remoteBooks }) });
+
+      return {
+        ok: true,
+        book: publicBookMeta(book),
+        books: readBooks().map(publicBookMeta),
+        chapterCount: chapters.length,
+        textLength: extractedText.length
+      };
     }
 
     case 'upload-file':
@@ -636,6 +754,15 @@ async function handleIpc(channel, args) {
               if (t && !t.startsWith('<!DOCTYPE') && !t.startsWith('<html')) text = t;
             }
           } catch { text = '[Lỗi tải Google Docs]'; }
+        } else if (link.includes('drive.google.com')) {
+          try {
+            const { fileBuffer } = await resolveGoogleDrivePdfBuffer(link);
+            const pdfResult = await pdfParse(fileBuffer);
+            text = String(pdfResult?.text || '').replace(/\r\n/g, '\n').trim();
+            if (!text) text = '[PDF này không có text để đọc. Nếu PDF là ảnh scan, cần OCR trước.]';
+          } catch (error) {
+            text = `[Lỗi tải Google Drive PDF: ${error.message || String(error)}]`;
+          }
         } else if (link) {
           text = `[Liên kết bản thảo: ${link}]`;
         } else {

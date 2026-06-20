@@ -717,6 +717,42 @@ function splitChapterForTranslation(sourceText, maxLength = 25000) {
   return parts.length ? parts : [sourceText];
 }
 
+function extractGoogleDriveIdFromLink(link) {
+  const raw = String(link || '').trim();
+  const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/) || raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : raw;
+}
+
+function splitPlainTextIntoChapters(text, chapterCount = 1) {
+  const count = Math.max(1, Number(chapterCount) || 1);
+  const cleaned = String(text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!cleaned) return [];
+
+  const paragraphs = cleaned.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  const targetLength = Math.ceil(cleaned.length / count);
+  const chapters = [];
+  let current = [];
+  let currentLength = 0;
+
+  for (const paragraph of paragraphs) {
+    if (chapters.length < count - 1 && current.length && currentLength + paragraph.length > targetLength) {
+      chapters.push(current.join('\n\n'));
+      current = [];
+      currentLength = 0;
+    }
+    current.push(paragraph);
+    currentLength += paragraph.length + 2;
+  }
+  if (current.length) chapters.push(current.join('\n\n'));
+
+  return chapters.map((chapterText, index) => ({
+    id: `chapter-${index + 1}`,
+    title: `Chapter ${index + 1}`,
+    text: chapterText,
+    sourceText: chapterText
+  }));
+}
+
 function cleanGeminiResponse(text) {
   return String(text || '')
     .replace(/(^|\n)\s*(Gemini\s+đã\s+nói|Gemini\s+said)\s*[:：]?\s*/gim, '\n')
@@ -1937,6 +1973,76 @@ ipcMain.handle('upload-from-google-drive', async (_event, { driveId, title, chap
     writeFilesIndex(files);
 
     return { ok: true, file: fileRecord };
+  } catch (error) {
+    return { ok: false, error: error && error.message ? error.message : String(error) };
+  }
+});
+
+ipcMain.handle('push-google-drive-pdf-book', async (_event, { driveLink, title, chapterCount, coverData, coverFileName, currentEmail }) => {
+  try {
+    await requireAdminUser(currentEmail);
+
+    const driveId = extractGoogleDriveIdFromLink(driveLink);
+    if (!driveId) throw new Error('Link Google Drive khong hop le.');
+    const bookTitle = String(title || '').trim();
+    if (!bookTitle) throw new Error('Vui long nhap ten truyen.');
+
+    const googleDriveUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+    const fileBuffer = await downloadFromUrl(googleDriveUrl);
+    const looksLikePdf = fileBuffer.length > 5 && fileBuffer.slice(0, 5).toString('utf8') === '%PDF-';
+    if (!looksLikePdf) {
+      throw new Error('Khong tai duoc file PDF. Hay dam bao link Google Drive la file PDF va da bat chia se Anyone with the link.');
+    }
+
+    let coverUrl = '';
+    if (coverData && coverFileName) {
+      fs.mkdirSync(FILES_DIR, { recursive: true });
+      const coverExt = path.extname(coverFileName).toLowerCase();
+      const validImageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      if (validImageExts.includes(coverExt)) {
+        const coverPath = path.join(FILES_DIR, `drive_cover_${Date.now()}${coverExt}`);
+        const coverBuffer = Buffer.isBuffer(coverData) ? coverData : Buffer.from(coverData);
+        fs.writeFileSync(coverPath, coverBuffer);
+        coverUrl = `file://${coverPath.replace(/\\/g, '/')}`;
+      }
+    }
+
+    const pdfResult = await pdfParse(fileBuffer);
+    const extractedText = String(pdfResult?.text || '').replace(/\r\n/g, '\n').trim();
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error('PDF nay khong co text de trich xuat. Neu PDF la anh scan, can OCR truoc.');
+    }
+
+    const chapters = splitPlainTextIntoChapters(extractedText, chapterCount);
+    if (!chapters.length) throw new Error('Khong chia duoc noi dung PDF thanh chuong.');
+
+    const book = normalizeBook(saveBook({
+      sourceUrl: `https://drive.google.com/file/d/${driveId}/view`,
+      chapters,
+      coverUrl,
+      extractedTitle: bookTitle
+    }));
+
+    const baseUrl = getFirebaseDatabaseUrl();
+    const data = await firebaseRequest(baseUrl, 'novelReader', { method: 'GET' }) || {};
+    const remoteBooks = Array.isArray(data?.books) ? data.books : [];
+    const existingIndex = remoteBooks.findIndex((item) => item.id === book.id);
+    if (existingIndex >= 0) remoteBooks[existingIndex] = book;
+    else remoteBooks.unshift(book);
+
+    const updatedAt = new Date().toISOString();
+    await firebaseRequest(baseUrl, 'novelReader', {
+      method: 'PUT',
+      body: JSON.stringify({ ...data, updatedAt, books: remoteBooks })
+    });
+
+    return {
+      ok: true,
+      book: publicBookMeta(book),
+      books: readBooks().map(publicBookMeta),
+      chapterCount: chapters.length,
+      textLength: extractedText.length
+    };
   } catch (error) {
     return { ok: false, error: error && error.message ? error.message : String(error) };
   }

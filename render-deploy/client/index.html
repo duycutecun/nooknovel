@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -1258,7 +1258,7 @@
       border-top: 1px solid rgba(124, 89, 52, .18);
       background: rgba(255, 239, 208, .92);
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       align-items: center;
     }
 
@@ -1461,6 +1461,9 @@
 
     .reader-text {
       max-width: 980px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .reader-text p {
@@ -1469,6 +1472,8 @@
       line-height: 1.56;
       color: #241f1a;
       font-family: "Times New Roman", Times, serif;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .reading-area.font-small .reader-text p {
@@ -1599,22 +1604,116 @@
         height: 100vh;
         border-radius: 0;
         padding: 0;
+        border: none;
+        box-shadow: none;
       }
 
-      .tablet-inner,
+      .tablet-inner {
+        border-radius: 0;
+        grid-template-rows: 56px minmax(0, 1fr) 56px;
+      }
+
       .reader-inner {
         border-radius: 0;
+        grid-template-rows: 40px 56px minmax(0, 1fr);
       }
 
-      .banner-row,
-      .continue-row,
-      .control-card,
-      .reader-toolbar {
+      .topbar {
+        padding: 0 14px;
+        grid-template-columns: 40px 1fr 40px;
+      }
+
+      .logo {
+        font-size: 22px;
+      }
+
+      .banner-row {
         grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .banner {
+        min-height: 110px;
+      }
+
+      .banner.large {
+        min-height: 115px;
+      }
+
+      .continue-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .continue-card {
+        grid-template-columns: 48px minmax(0, 1fr) 30px;
+        padding: 8px;
+        gap: 8px;
+      }
+
+      .continue-card img,
+      .cover-fallback {
+        width: 48px;
+        height: 62px;
+        font-size: 9px;
+      }
+
+      .control-card {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .reader-toolbar {
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        gap: 6px;
+        padding: 0 10px;
+      }
+
+      .reader-status {
+        height: 40px;
+        padding: 0 12px;
+      }
+
+      .page-progress {
+        display: none !important;
+      }
+
+      .toolbar-actions {
+        gap: 8px;
+      }
+
+      .toolbar-actions span:not(.switch) {
+        display: none !important;
       }
 
       .reading-area {
-        padding: 20px 26px 42px;
+        padding: 16px 18px 40px;
+      }
+
+      .reader-text p {
+        font-size: 18px;
+        line-height: 1.5;
+      }
+
+      .bottom-nav {
+        grid-template-columns: repeat(6, 1fr);
+        height: 56px;
+      }
+
+      .bottom-nav button {
+        height: 56px;
+        font-size: 9px;
+      }
+
+      .bottom-nav strong {
+        font-size: 16px;
+      }
+
+      .auth-modal {
+        width: 100%;
+        max-width: 420px;
+        border-radius: 24px;
+        padding: 20px 20px 16px;
       }
     }
 
@@ -2547,6 +2646,7 @@
                   <input id="fileUploadTitle" type="text" placeholder="Tên file" style="flex:1;">
                   <input id="chapterCountInput" type="number" placeholder="Số chương" min="1" style="flex:1; max-width:100px;">
                   <button id="uploadFileButton" class="action" type="button">UPLOAD</button>
+                  <button id="pushDrivePdfButton" class="action secondary" type="button">PUSH DRIVE PDF</button>
                 </div>
                 <div id="fileUploadStatus" style="font-size:12px; color:#666; margin-top:5px;"></div>
               </div>
@@ -2875,10 +2975,14 @@
     <aside id="sidePanel" class="side-panel hidden"></aside>
   </section>
 
+  <!-- Firebase App & Auth SDK (Compat Version) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
   <script>
     // ── ipcRenderer SHIM (Web Version) ──────────────────────────────────────
     // Replaces Electron IPC with REST API calls to the backend server.
-    const _apiBase = '';  // Same origin when served by Express
+    const _apiBase = 'https://nooknovel1.onrender.com';  // Render server URL
 
     // WebSocket for real-time automation progress
     let _ws = null;
@@ -2886,8 +2990,8 @@
 
     function _connectWs() {
       try {
-        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        _ws = new WebSocket(`${proto}//${location.host}`);
+        const wsUrl = _apiBase ? _apiBase.replace(/^http/, 'ws') : (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host;
+        _ws = new WebSocket(wsUrl);
         _ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data);
@@ -2929,6 +3033,52 @@
       openExternal: (url) => { window.open(url, '_blank'); }
     };
     // ── END SHIM ─────────────────────────────────────────────────────────────
+
+    // ── FIREBASE WEB AUTH SDK INITIALIZATION ─────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyCy0LAsBTvNVBDBDaZUNSnnCD4RJ-6H51w",
+      authDomain: "nooknovel-7b5a1.firebaseapp.com",
+      databaseURL: "https://nooknovel-7b5a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "nooknovel-7b5a1",
+      storageBucket: "nooknovel-7b5a1.firebasestorage.app",
+      messagingSenderId: "956359877711",
+      appId: "1:956359877711:web:e34eb19da389743d77363a",
+      measurementId: "G-VNXCGWPPNT"
+    };
+
+    if (typeof firebase !== 'undefined') {
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      } catch (e) {
+        console.error("Lỗi khởi tạo Firebase SDK:", e);
+      }
+    }
+
+    async function syncFirebaseUserWithBackend(fbUser) {
+      const email = fbUser.email || `${fbUser.uid}@facebook.com`;
+      const displayName = fbUser.displayName || '';
+      const photoURL = fbUser.photoURL || '';
+      const providerId = fbUser.providerData[0]?.providerId === 'facebook.com' ? 'facebook' : 'google';
+
+      let res = await ipcRenderer.invoke('auth-get-user', email);
+      if (!res.ok) {
+        res = await ipcRenderer.invoke('auth-local-signup', email, 'firebase-auth-dummy-pwd-123321', providerId);
+      }
+      if (res.ok) {
+        if (!res.user.displayName || !res.user.avatarUrl) {
+          const profile = {
+            displayName: res.user.displayName || displayName,
+            avatarUrl: res.user.avatarUrl || photoURL
+          };
+          const updateRes = await ipcRenderer.invoke('auth-update-profile', { email, profile });
+          if (updateRes.ok) {
+            res.user = updateRes.user;
+          }
+        }
+      }
+      return res;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const homeScreen = document.getElementById('homeScreen');
     const readerScreen = document.getElementById('readerScreen');
@@ -3026,6 +3176,17 @@
     let currentUser = null;
     let isTbcSorting = false;
     let tbcTempChapters = [];
+
+    function normalizeBooksPayload(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.books)) return payload.books;
+      return [];
+    }
+
+    function setBooks(payload) {
+      books = normalizeBooksPayload(payload);
+      return books;
+    }
 
     function setTab(tabName) {
       currentTab = tabName;
@@ -3423,7 +3584,7 @@
               const result = await ipcRenderer.invoke('save-file-to-library', file.id, currentEmail);
               if (result.ok) {
                 // refresh local books list and open the saved book in reader
-                books = await ipcRenderer.invoke('list-books');
+                setBooks(await ipcRenderer.invoke('list-books'));
                 renderAllLists();
                 if (result.book && result.book.id) {
                   await openBook(result.book.id);
@@ -3521,6 +3682,7 @@
         const result = await ipcRenderer.invoke('pull-single-book', dbUrl, bookId, currentEmail);
         if (result.ok) {
           // Add to local books
+          setBooks(books);
           const existingIndex = books.findIndex(b => b.id === bookId);
           if (existingIndex >= 0) {
             books[existingIndex] = result.book;
@@ -3682,7 +3844,7 @@
           percent,
           bookmarked: activeBook.readingProgress.bookmarked
         });
-        books = await ipcRenderer.invoke('list-books');
+        setBooks(await ipcRenderer.invoke('list-books'));
         renderAllLists();
       }, 400);
     }
@@ -3709,7 +3871,7 @@
     }
 
     async function loadBooks() {
-      books = await ipcRenderer.invoke('list-books');
+      setBooks(await ipcRenderer.invoke('list-books'));
       renderAllLists();
     }
 
@@ -3721,7 +3883,8 @@
     }
 
     async function openBook(id) {
-      const book = await ipcRenderer.invoke('get-book', id);
+      const bookResponse = await ipcRenderer.invoke('get-book', id);
+      const book = bookResponse?.book || bookResponse;
       if (!book) return;
 
       activeBook = book;
@@ -3741,7 +3904,7 @@
       const ok = confirm("Bạn có chắc chắn muốn xóa quyển truyện này không?");
       if (!ok) return;
 
-      books = await ipcRenderer.invoke('delete-book', targetId);
+      setBooks(await ipcRenderer.invoke('delete-book', targetId));
 
       if (activeBookId === targetId) {
         activeBook = null;
@@ -3776,6 +3939,7 @@
     const chapterCountInput = document.getElementById('chapterCountInput');
     const googleDocsLink = document.getElementById('googleDocsLink');
     const googleDriveLink = document.getElementById('googleDriveLink');
+    const pushDrivePdfButton = document.getElementById('pushDrivePdfButton');
 
     // Helper to extract Google Docs ID
     function extractGoogleDocsId(link) {
@@ -3896,6 +4060,62 @@
       });
     }
 
+    if (pushDrivePdfButton) {
+      pushDrivePdfButton.addEventListener('click', async () => {
+        const currentEmail = localStorage.getItem('currentUserEmail');
+        if (!currentEmail) {
+          fileUploadStatus.textContent = 'Vui long dang nhap truoc.';
+          return;
+        }
+
+        const driveLink = googleDriveLink.value.trim();
+        const title = fileUploadTitle.value.trim();
+        const chapterCount = parseInt(chapterCountInput.value, 10) || 1;
+
+        if (!driveLink) {
+          fileUploadStatus.textContent = 'Vui long dan link Google Drive PDF.';
+          return;
+        }
+        if (!title) {
+          fileUploadStatus.textContent = 'Vui long nhap ten truyen.';
+          return;
+        }
+
+        pushDrivePdfButton.disabled = true;
+        uploadFileButton.disabled = true;
+        fileUploadStatus.textContent = 'Dang tai PDF tu Google Drive va tao truyen...';
+
+        try {
+          const result = await ipcRenderer.invoke('push-google-drive-pdf-book', {
+            driveLink,
+            title,
+            chapterCount,
+            currentEmail
+          });
+
+          if (!result.ok) {
+            fileUploadStatus.textContent = 'Loi: ' + result.error;
+            return;
+          }
+
+          setBooks(result.books);
+          renderAllLists();
+          await loadCatalog();
+          if (result.book?.id) await openBook(result.book.id);
+
+          googleDriveLink.value = '';
+          fileUploadTitle.value = '';
+          chapterCountInput.value = '';
+          fileUploadStatus.textContent = `Da push thanh truyen: ${result.chapterCount || chapterCount} chuong, ${result.textLength || 0} ky tu.`;
+        } catch (error) {
+          fileUploadStatus.textContent = 'Loi: ' + (error.message || String(error));
+        } finally {
+          pushDrivePdfButton.disabled = false;
+          uploadFileButton.disabled = false;
+        }
+      });
+    }
+
     runButton.addEventListener('click', async () => {
       const selectedUrl = (urlInput && urlInput.value.trim()) || window.selectedDiscoverUrl || '';
       if (!selectedUrl) {
@@ -3931,7 +4151,7 @@
           return;
         }
 
-        books = result.books;
+        setBooks(result.books);
         renderAllLists();
         await openBook(result.book.id);
         setProgress('Hoàn tất. Sách đã được lưu vào thư viện.', 100);
@@ -3976,7 +4196,7 @@
       try {
         const result = await ipcRenderer.invoke('pull-from-firebase', dbUrl, currentEmail);
         if (result.ok) {
-          books = result.books;
+          setBooks(result.books);
           renderAllLists();
           syncStatus.textContent = `Đã tải ${result.count} truyện từ Firebase.`;
         } else {
@@ -4518,7 +4738,7 @@
 
     signInGoogleButton.addEventListener('click', async () => {
       signInGoogleButton.disabled = true;
-      authMessage.textContent = 'Đang mở Chrome để đăng nhập Google...';
+      authMessage.textContent = 'Đang mở cửa sổ đăng nhập Google...';
 
       try {
         const result = await ipcRenderer.invoke('auth-google-signin');
@@ -4528,6 +4748,26 @@
           authPasswordInput.value = '';
           rememberAuthEmail(result.user?.email || '');
           setAuthUser(result.user);
+        } else if (result.useFirebaseAuth) {
+          // Real Firebase Google Auth on Web
+          try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            authMessage.textContent = 'Đang kết nối đến Firebase Auth...';
+            const fbResult = await firebase.auth().signInWithPopup(provider);
+            authMessage.textContent = 'Đăng nhập Google thành công! Đang đồng bộ...';
+            const syncRes = await syncFirebaseUserWithBackend(fbResult.user);
+            if (syncRes.ok) {
+              authMessage.textContent = '✓ Đăng nhập Google thành công.';
+              authEmailInput.value = '';
+              authPasswordInput.value = '';
+              rememberAuthEmail(fbResult.user.email);
+              setAuthUser(syncRes.user);
+            } else {
+              authMessage.textContent = '✗ Lỗi đồng bộ: ' + syncRes.error;
+            }
+          } catch (fbErr) {
+            authMessage.textContent = '✗ Lỗi Firebase: ' + fbErr.message;
+          }
         } else {
           authMessage.textContent = '✗ ' + (result.error || 'Lỗi đăng nhập Google. Vui lòng thử lại.');
         }
@@ -4540,32 +4780,25 @@
 
     if (signInFacebookButton) {
       signInFacebookButton.addEventListener('click', async () => {
-        const email = (authEmailInput.value.trim() || window.prompt('Nhập email Facebook để liên kết tài khoản:', '') || '').trim();
-        if (!email) {
-          authMessage.textContent = 'Hãy nhập email Facebook trước khi đăng nhập.';
-          return;
-        }
-
         signInFacebookButton.disabled = true;
-        authMessage.textContent = 'Đang mở Facebook để đăng nhập...';
+        authMessage.textContent = 'Đang mở cửa sổ đăng nhập Facebook...';
 
         try {
-          const result = await ipcRenderer.invoke('auth-facebook-signin', {
-            email,
-            displayName: profileDisplayNameInput?.value?.trim() || ''
-          });
-
-          if (result.ok) {
-            authMessage.textContent = 'Đăng nhập Facebook thành công.';
+          const provider = new firebase.auth.FacebookAuthProvider();
+          const fbResult = await firebase.auth().signInWithPopup(provider);
+          authMessage.textContent = 'Đăng nhập Facebook thành công! Đang đồng bộ...';
+          const syncRes = await syncFirebaseUserWithBackend(fbResult.user);
+          if (syncRes.ok) {
+            authMessage.textContent = '✓ Đăng nhập Facebook thành công.';
             authEmailInput.value = '';
             authPasswordInput.value = '';
-            rememberAuthEmail(result.user?.email || email);
-            setAuthUser(result.user);
+            rememberAuthEmail(fbResult.user.email || `${fbResult.user.uid}@facebook.com`);
+            setAuthUser(syncRes.user);
           } else {
-            authMessage.textContent = result.error || 'Không thể đăng nhập Facebook.';
+            authMessage.textContent = '✗ Lỗi đồng bộ: ' + syncRes.error;
           }
         } catch (error) {
-          authMessage.textContent = `Lỗi: ${error.message}`;
+          authMessage.textContent = `✗ Lỗi: ${error.message}`;
         } finally {
           signInFacebookButton.disabled = false;
         }

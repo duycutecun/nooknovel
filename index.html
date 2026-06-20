@@ -1461,6 +1461,9 @@
 
     .reader-text {
       max-width: 980px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .reader-text p {
@@ -1469,6 +1472,8 @@
       line-height: 1.56;
       color: #241f1a;
       font-family: "Times New Roman", Times, serif;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .reading-area.font-small .reader-text p {
@@ -2547,6 +2552,7 @@
                   <input id="fileUploadTitle" type="text" placeholder="Tên file" style="flex:1;">
                   <input id="chapterCountInput" type="number" placeholder="Số chương" min="1" style="flex:1; max-width:100px;">
                   <button id="uploadFileButton" class="action" type="button">UPLOAD</button>
+                  <button id="pushDrivePdfButton" class="action secondary" type="button">PUSH DRIVE PDF</button>
                 </div>
                 <div id="fileUploadStatus" style="font-size:12px; color:#666; margin-top:5px;"></div>
               </div>
@@ -2975,6 +2981,17 @@
     let isTbcSorting = false;
     let tbcTempChapters = [];
 
+    function normalizeBooksPayload(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.books)) return payload.books;
+      return [];
+    }
+
+    function setBooks(payload) {
+      books = normalizeBooksPayload(payload);
+      return books;
+    }
+
     function setTab(tabName) {
       currentTab = tabName;
       document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
@@ -3371,7 +3388,7 @@
               const result = await ipcRenderer.invoke('save-file-to-library', file.id, currentEmail);
               if (result.ok) {
                 // refresh local books list and open the saved book in reader
-                books = await ipcRenderer.invoke('list-books');
+                setBooks(await ipcRenderer.invoke('list-books'));
                 renderAllLists();
                 if (result.book && result.book.id) {
                   await openBook(result.book.id);
@@ -3469,6 +3486,7 @@
         const result = await ipcRenderer.invoke('pull-single-book', dbUrl, bookId, currentEmail);
         if (result.ok) {
           // Add to local books
+          setBooks(books);
           const existingIndex = books.findIndex(b => b.id === bookId);
           if (existingIndex >= 0) {
             books[existingIndex] = result.book;
@@ -3579,7 +3597,18 @@
 
     function renderCurrentChapter() {
       const chapter = currentChapter();
-      if (!activeBook || !chapter) return;
+      if (!activeBook || !chapter) {
+        readerBookTitle.textContent = activeBook?.title || 'Khong doc duoc truyen';
+        chapterTitle.textContent = 'Khong co chuong de doc';
+        readerMeta.textContent = 'Truyen nay chua co noi dung chuong hop le.';
+        pageLabel.textContent = 'Chapter 0 of 0';
+        prevChapterButton.disabled = true;
+        nextChapterButton.disabled = true;
+        renderTranslation('Khong tim thay noi dung truyen. Hay thu tai lai du lieu tu Firebase hoac mo mot truyen khac.');
+        updateReaderProgress(0);
+        showReader();
+        return;
+      }
 
       activeBookId = activeBook.id;
       readerBookTitle.textContent = activeBook.title;
@@ -3588,7 +3617,8 @@
       pageLabel.textContent = `Chapter ${currentChapterIndex + 1} of ${activeBook.chapters.length}`;
       prevChapterButton.disabled = currentChapterIndex <= 0;
       nextChapterButton.disabled = currentChapterIndex >= activeBook.chapters.length - 1;
-      renderTranslation(chapter.text || activeBook.text || '');
+      const readableText = chapter.text || activeBook.text || '';
+      renderTranslation(readableText || 'Chuong nay chua co noi dung de doc.');
 
       const savedPercent = activeBook.readingProgress?.chapterIndex === currentChapterIndex
         ? Number(activeBook.readingProgress.percent || 0)
@@ -3630,7 +3660,7 @@
           percent,
           bookmarked: activeBook.readingProgress.bookmarked
         });
-        books = await ipcRenderer.invoke('list-books');
+        setBooks(await ipcRenderer.invoke('list-books'));
         renderAllLists();
       }, 400);
     }
@@ -3657,7 +3687,7 @@
     }
 
     async function loadBooks() {
-      books = await ipcRenderer.invoke('list-books');
+      setBooks(await ipcRenderer.invoke('list-books'));
       renderAllLists();
     }
 
@@ -3669,8 +3699,25 @@
     }
 
     async function openBook(id) {
-      const book = await ipcRenderer.invoke('get-book', id);
-      if (!book) return;
+      const bookResponse = await ipcRenderer.invoke('get-book', id);
+      const book = bookResponse?.book || bookResponse;
+      if (!book) {
+        activeBook = null;
+        activeBookId = null;
+        currentChapterIndex = 0;
+        readerBookTitle.textContent = 'Khong tim thay sach';
+        chapterTitle.textContent = 'Khong doc duoc truyen';
+        readerMeta.textContent = 'Du lieu sach khong con ton tai trong thu vien cuc bo.';
+        pageLabel.textContent = 'Chapter 0 of 0';
+        prevChapterButton.disabled = true;
+        nextChapterButton.disabled = true;
+        renderTranslation('Hay thu dong bo lai du lieu, tai lai truyen tu Discovery, hoac chon mot truyen khac trong Library.');
+        updateReaderProgress(0);
+        showReader();
+        setBooks(await ipcRenderer.invoke('list-books'));
+        renderAllLists();
+        return;
+      }
 
       activeBook = book;
       activeBookId = book.id;
@@ -3689,7 +3736,7 @@
       const ok = confirm("Bạn có chắc chắn muốn xóa quyển truyện này không?");
       if (!ok) return;
 
-      books = await ipcRenderer.invoke('delete-book', targetId);
+      setBooks(await ipcRenderer.invoke('delete-book', targetId));
 
       if (activeBookId === targetId) {
         activeBook = null;
@@ -3724,6 +3771,7 @@
     const chapterCountInput = document.getElementById('chapterCountInput');
     const googleDocsLink = document.getElementById('googleDocsLink');
     const googleDriveLink = document.getElementById('googleDriveLink');
+    const pushDrivePdfButton = document.getElementById('pushDrivePdfButton');
 
     // Helper to extract Google Docs ID
     function extractGoogleDocsId(link) {
@@ -3844,6 +3892,73 @@
       });
     }
 
+    if (pushDrivePdfButton) {
+      pushDrivePdfButton.addEventListener('click', async () => {
+        const currentEmail = localStorage.getItem('currentUserEmail');
+        if (!currentEmail) {
+          fileUploadStatus.textContent = 'Vui long dang nhap truoc.';
+          return;
+        }
+
+        const driveLink = googleDriveLink.value.trim();
+        const title = fileUploadTitle.value.trim();
+        const chapterCount = parseInt(chapterCountInput.value, 10) || 1;
+
+        if (!driveLink) {
+          fileUploadStatus.textContent = 'Vui long dan link Google Drive PDF.';
+          return;
+        }
+        if (!title) {
+          fileUploadStatus.textContent = 'Vui long nhap ten truyen.';
+          return;
+        }
+
+        let coverData = null;
+        let coverFileName = null;
+        if (coverImageInput.files.length > 0) {
+          const coverFile = coverImageInput.files[0];
+          coverData = new Uint8Array(await coverFile.arrayBuffer());
+          coverFileName = coverFile.name;
+        }
+
+        pushDrivePdfButton.disabled = true;
+        uploadFileButton.disabled = true;
+        fileUploadStatus.textContent = 'Dang tai PDF tu Google Drive va tao truyen...';
+
+        try {
+          const result = await ipcRenderer.invoke('push-google-drive-pdf-book', {
+            driveLink,
+            title,
+            chapterCount,
+            coverData,
+            coverFileName,
+            currentEmail
+          });
+
+          if (!result.ok) {
+            fileUploadStatus.textContent = 'Loi: ' + result.error;
+            return;
+          }
+
+          setBooks(result.books);
+          renderAllLists();
+          await loadCatalog();
+          if (result.book?.id) await openBook(result.book.id);
+
+          googleDriveLink.value = '';
+          fileUploadTitle.value = '';
+          chapterCountInput.value = '';
+          coverImageInput.value = '';
+          fileUploadStatus.textContent = `Da push thanh truyen: ${result.chapterCount || chapterCount} chuong, ${result.textLength || 0} ky tu.`;
+        } catch (error) {
+          fileUploadStatus.textContent = 'Loi: ' + (error.message || String(error));
+        } finally {
+          pushDrivePdfButton.disabled = false;
+          uploadFileButton.disabled = false;
+        }
+      });
+    }
+
     runButton.addEventListener('click', async () => {
       const selectedUrl = (urlInput && urlInput.value.trim()) || window.selectedDiscoverUrl || '';
       if (!selectedUrl) {
@@ -3879,7 +3994,7 @@
           return;
         }
 
-        books = result.books;
+        setBooks(result.books);
         renderAllLists();
         await openBook(result.book.id);
         setProgress('Hoàn tất. Sách đã được lưu vào thư viện.', 100);
@@ -3924,7 +4039,7 @@
       try {
         const result = await ipcRenderer.invoke('pull-from-firebase', dbUrl, currentEmail);
         if (result.ok) {
-          books = result.books;
+          setBooks(result.books);
           renderAllLists();
           syncStatus.textContent = `Đã tải ${result.count} truyện từ Firebase.`;
         } else {
@@ -4933,6 +5048,7 @@
     async function loadCreatorSelectBooks() {
       const select = document.getElementById('creatorBookSelect');
       if (!select) return;
+      const previousValue = select.value;
 
       // Add change listener if not already attached
       if (!select.dataset.listenerAttached) {
@@ -4949,6 +5065,9 @@
           opt.textContent = book.title;
           select.appendChild(opt);
         });
+        if (previousValue && [...select.options].some((option) => option.value === previousValue)) {
+          select.value = previousValue;
+        }
       }
 
       // Also reset/update chapters list based on selection
