@@ -341,6 +341,63 @@ function splitPlainTextIntoChapters(text, chapterCount = 1) {
   }));
 }
 
+async function renderPdfPageWithSpacing(pageData) {
+  const textContent = await pageData.getTextContent({
+    normalizeWhitespace: true,
+    disableCombineTextItems: true
+  });
+
+  const lines = [];
+  let currentLine = '';
+  let lastY = null;
+  let lastEndX = null;
+  let lastFontSize = 10;
+
+  for (const item of textContent.items || []) {
+    const text = String(item.str || '');
+    if (!text) continue;
+    const transform = item.transform || [];
+    const x = Number(transform[4]) || 0;
+    const y = Number(transform[5]) || 0;
+    const fontSize = Math.max(1, Math.abs(Number(transform[0]) || Number(item.height) || lastFontSize || 10));
+    const sameLine = lastY === null || Math.abs(y - lastY) <= Math.max(2, fontSize * 0.45);
+
+    if (!sameLine) {
+      if (currentLine.trim()) lines.push(currentLine.trim());
+      currentLine = '';
+      lastEndX = null;
+    }
+
+    if (currentLine && lastEndX !== null) {
+      const gap = x - lastEndX;
+      const needsSpace = gap > Math.max(1.8, fontSize * 0.18)
+        && !/\s$/.test(currentLine)
+        && !/^[,.;:!?，。！？）」』\]\)]/.test(text);
+      if (needsSpace) currentLine += ' ';
+    }
+
+    currentLine += text;
+    lastY = y;
+    lastFontSize = fontSize;
+    lastEndX = x + (Number(item.width) || text.length * fontSize * 0.45);
+
+    if (item.hasEOL) {
+      if (currentLine.trim()) lines.push(currentLine.trim());
+      currentLine = '';
+      lastEndX = null;
+      lastY = null;
+    }
+  }
+
+  if (currentLine.trim()) lines.push(currentLine.trim());
+  return lines.join('\n');
+}
+
+async function extractPdfTextFromBuffer(buffer) {
+  const pdfResult = await pdfParse(buffer, { pagerender: renderPdfPageWithSpacing });
+  return String(pdfResult?.text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // ── WebSocket broadcast ───────────────────────────────────────────────────────
 function broadcast(msg) {
   const s = JSON.stringify(msg);
@@ -548,8 +605,7 @@ async function handleIpc(channel, args) {
       if (!bookTitle) throw new Error('Vui long nhap ten truyen.');
 
       const { fileBuffer, driveId } = await resolveGoogleDrivePdfBuffer(driveLink);
-      const pdfResult = await pdfParse(fileBuffer);
-      const extractedText = String(pdfResult?.text || '').replace(/\r\n/g, '\n').trim();
+      const extractedText = await extractPdfTextFromBuffer(fileBuffer);
       if (!extractedText || extractedText.length < 50) {
         throw new Error('PDF nay khong co text de trich xuat. Neu PDF la anh scan, can OCR truoc.');
       }
@@ -757,8 +813,7 @@ async function handleIpc(channel, args) {
         } else if (link.includes('drive.google.com')) {
           try {
             const { fileBuffer } = await resolveGoogleDrivePdfBuffer(link);
-            const pdfResult = await pdfParse(fileBuffer);
-            text = String(pdfResult?.text || '').replace(/\r\n/g, '\n').trim();
+            text = await extractPdfTextFromBuffer(fileBuffer);
             if (!text) text = '[PDF này không có text để đọc. Nếu PDF là ảnh scan, cần OCR trước.]';
           } catch (error) {
             text = `[Lỗi tải Google Drive PDF: ${error.message || String(error)}]`;

@@ -753,6 +753,64 @@ function splitPlainTextIntoChapters(text, chapterCount = 1) {
   }));
 }
 
+async function renderPdfPageWithSpacing(pageData) {
+  const textContent = await pageData.getTextContent({
+    normalizeWhitespace: true,
+    disableCombineTextItems: true
+  });
+
+  const lines = [];
+  let currentLine = '';
+  let lastY = null;
+  let lastEndX = null;
+  let lastFontSize = 10;
+
+  for (const item of textContent.items || []) {
+    const text = String(item.str || '');
+    if (!text) continue;
+
+    const transform = item.transform || [];
+    const x = Number(transform[4]) || 0;
+    const y = Number(transform[5]) || 0;
+    const fontSize = Math.max(1, Math.abs(Number(transform[0]) || Number(item.height) || lastFontSize || 10));
+    const sameLine = lastY === null || Math.abs(y - lastY) <= Math.max(2, fontSize * 0.45);
+
+    if (!sameLine) {
+      if (currentLine.trim()) lines.push(currentLine.trim());
+      currentLine = '';
+      lastEndX = null;
+    }
+
+    if (currentLine && lastEndX !== null) {
+      const gap = x - lastEndX;
+      const needsSpace = gap > Math.max(1.8, fontSize * 0.18)
+        && !/\s$/.test(currentLine)
+        && !/^[,.;:!?，。！？）」』\]\)]/.test(text);
+      if (needsSpace) currentLine += ' ';
+    }
+
+    currentLine += text;
+    lastY = y;
+    lastFontSize = fontSize;
+    lastEndX = x + (Number(item.width) || text.length * fontSize * 0.45);
+
+    if (item.hasEOL) {
+      if (currentLine.trim()) lines.push(currentLine.trim());
+      currentLine = '';
+      lastEndX = null;
+      lastY = null;
+    }
+  }
+
+  if (currentLine.trim()) lines.push(currentLine.trim());
+  return lines.join('\n');
+}
+
+async function extractPdfTextFromBuffer(buffer) {
+  const pdfResult = await pdfParse(buffer, { pagerender: renderPdfPageWithSpacing });
+  return String(pdfResult?.text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function cleanGeminiResponse(text) {
   return String(text || '')
     .replace(/(^|\n)\s*(Gemini\s+đã\s+nói|Gemini\s+said)\s*[:：]?\s*/gim, '\n')
@@ -2007,8 +2065,7 @@ ipcMain.handle('push-google-drive-pdf-book', async (_event, { driveLink, title, 
       }
     }
 
-    const pdfResult = await pdfParse(fileBuffer);
-    const extractedText = String(pdfResult?.text || '').replace(/\r\n/g, '\n').trim();
+    const extractedText = await extractPdfTextFromBuffer(fileBuffer);
     if (!extractedText || extractedText.length < 50) {
       throw new Error('PDF nay khong co text de trich xuat. Neu PDF la anh scan, can OCR truoc.');
     }
@@ -2123,8 +2180,7 @@ ipcMain.handle('save-file-to-library', async (_event, fileId, currentEmail) => {
       if (lowerExt === '.pdf') {
         const dataBuffer = fs.readFileSync(destPath);
         try {
-          const pdfResult = await pdfParse(dataBuffer);
-          extractedText = (pdfResult && pdfResult.text) ? String(pdfResult.text).trim() : '';
+          extractedText = await extractPdfTextFromBuffer(dataBuffer);
         } catch (e) {
           extractedText = '';
         }
@@ -2689,8 +2745,7 @@ async function extractTextFromFile(filePath) {
       return res && res.value ? String(res.value) : '';
     } else if (ext === '.pdf') {
       const dataBuffer = fs.readFileSync(cleanPath);
-      const pdfResult = await pdfParse(dataBuffer);
-      return pdfResult && pdfResult.text ? String(pdfResult.text).trim() : '';
+      return await extractPdfTextFromBuffer(dataBuffer);
     }
     return `[File định dạng không hỗ trợ: ${ext}]`;
   } catch (error) {
@@ -2832,8 +2887,7 @@ ipcMain.handle('creator-push-to-discovery', async (_event, { bookId, currentEmai
                 const pdfBuffer = await downloadFromUrl(pdfUrl);
                 // Verify it's actually a PDF (starts with %PDF)
                 if (pdfBuffer.length > 4 && pdfBuffer.slice(0, 5).toString() === '%PDF-') {
-                  const pdfResult = await pdfParse(pdfBuffer);
-                  extractedText = pdfResult && pdfResult.text ? String(pdfResult.text).trim() : '';
+                  extractedText = await extractPdfTextFromBuffer(pdfBuffer);
                   if (extractedText) downloaded = true;
                 }
               } catch { /* PDF export also failed */ }
@@ -2863,8 +2917,7 @@ ipcMain.handle('creator-push-to-discovery', async (_event, { bookId, currentEmai
               extractedText = '[Không tải được file. Hãy đảm bảo Google Drive đã được chia sẻ công khai (Anyone with the link).]';
             } else if (firstBytes.startsWith('%PDF-')) {
               // It's a PDF
-              const pdfResult = await pdfParse(fileBuffer);
-              extractedText = pdfResult && pdfResult.text ? String(pdfResult.text).trim() : '';
+              extractedText = await extractPdfTextFromBuffer(fileBuffer);
             } else if (fileBuffer[0] === 0x50 && fileBuffer[1] === 0x4B) {
               // It's a ZIP/DOCX
               const tmpPath = path.join(CREATOR_FILES_DIR, `tmp_${Date.now()}.docx`);
