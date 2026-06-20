@@ -2982,7 +2982,10 @@
   <script>
     // ── ipcRenderer SHIM (Web Version) ──────────────────────────────────────
     // Replaces Electron IPC with REST API calls to the backend server.
-    const _apiBase = 'https://nooknovel1.onrender.com';  // Render server URL
+    // By default use same-origin (empty) so local `npm start` or a proxied
+    // dev server will be used. Set to a full URL only when calling a remote
+    // deployment (e.g. Render) from a different origin.
+    const _apiBase = '';
 
     // WebSocket for real-time automation progress
     let _ws = null;

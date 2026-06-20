@@ -25,15 +25,34 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 let admin = null;
 let db = null;
 const saPath = path.join(__dirname, 'serviceAccountKey.json');
-if (fs.existsSync(saPath)) {
-  try {
-    admin = require('firebase-admin');
-    admin.initializeApp({ credential: admin.credential.cert(require(saPath)) });
-    db = admin.firestore();
-    console.log('Initialized firebase-admin for Firestore sync');
-  } catch (e) {
-    console.warn('Failed to init firebase-admin:', e.message);
+// Support loading Firebase service account from an environment variable so
+// secrets do not need to be committed. If `FIREBASE_SERVICE_ACCOUNT` is set
+// it should contain the JSON string of the service account key.
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const parsed = typeof process.env.FIREBASE_SERVICE_ACCOUNT === 'string'
+        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+        : process.env.FIREBASE_SERVICE_ACCOUNT;
+      fs.writeFileSync(saPath, JSON.stringify(parsed, null, 2), { encoding: 'utf8' });
+      console.log('Wrote Firebase service account JSON to', saPath);
+    } catch (e) {
+      console.warn('Could not parse FIREBASE_SERVICE_ACCOUNT:', e.message);
+    }
   }
+
+  if (fs.existsSync(saPath)) {
+    try {
+      admin = require('firebase-admin');
+      admin.initializeApp({ credential: admin.credential.cert(require(saPath)) });
+      db = admin.firestore();
+      console.log('Initialized firebase-admin for Firestore sync');
+    } catch (e) {
+      console.warn('Failed to init firebase-admin:', e.message);
+    }
+  }
+} catch (e) {
+  console.warn('Firebase service account setup skipped:', e.message);
 }
 
 // Broadcast helper
