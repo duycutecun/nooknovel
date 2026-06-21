@@ -47,6 +47,16 @@ app.post('/admin/sync', async (req, res) => {
   }
 });
 
+// Admin verification endpoint
+app.post('/admin/verify', (req, res) => {
+  const provided = req.body && req.body.secret;
+  if (!process.env.ADMIN_SECRET) return res.status(500).json({ error: 'ADMIN_SECRET not configured on server' });
+  if (provided && provided === process.env.ADMIN_SECRET) {
+    return res.json({ ok: true });
+  }
+  return res.status(403).json({ error: 'forbidden' });
+});
+
 // Firestore admin (optional)
 let admin = null;
 let db = null;

@@ -4,7 +4,16 @@ import { collection, onSnapshot, doc, setDoc, serverTimestamp, getDocs, getDoc }
 import { signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
 import './styles.css'
 
-function BookCover({ title }) {
+function BookCover({ title, coverUrl }) {
+  if (coverUrl && coverUrl.trim() !== '') {
+    return (
+      <div className="book-cover">
+        <div className="book-cover-spine" style={{ background: 'rgba(0, 0, 0, 0.2)' }}></div>
+        <img src={coverUrl} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <div className="book-cover-overlay"></div>
+      </div>
+    );
+  }
   let hash = 0;
   for (let i = 0; i < title.length; i++) {
     hash = title.charCodeAt(i) + ((hash << 5) - hash);
@@ -51,6 +60,13 @@ export default function App() {
   const [view, setView] = useState('home')
   const [currentTab, setCurrentTab] = useState('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('isAdmin') === 'true')
+  const [adminSecretInput, setAdminSecretInput] = useState('')
+  const [editingNovel, setEditingNovel] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [editCoverUrl, setEditCoverUrl] = useState('')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -244,7 +260,7 @@ export default function App() {
 
   // Trigger admin sync on server (requires ADMIN_SECRET)
   async function adminSync() {
-    const secret = window.prompt('Nhập Admin Secret để đồng bộ server:')
+    let secret = localStorage.getItem('adminSecret') || window.prompt('Nhập Admin Secret để đồng bộ server:')
     if (!secret) return addLog('Admin sync aborted')
     try {
       const res = await fetch('/admin/sync', {
@@ -253,10 +269,78 @@ export default function App() {
         body: JSON.stringify({})
       })
       const data = await res.json()
-      if (res.ok) addLog('Admin sync uploaded: ' + (data.uploaded || 0))
+      if (res.ok) {
+        addLog('Admin sync uploaded: ' + (data.uploaded || 0))
+        localStorage.setItem('adminSecret', secret)
+        setIsAdmin(true)
+        localStorage.setItem('isAdmin', 'true')
+      }
       else addLog('Admin sync failed: ' + (data.error || res.statusText))
     } catch (e) {
       addLog('Admin sync error: ' + (e.message || e))
+    }
+  }
+
+  async function verifyAdminSecret(secret) {
+    if (!secret) return
+    try {
+      const res = await fetch('/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret })
+      })
+      if (res.ok) {
+        setIsAdmin(true)
+        localStorage.setItem('isAdmin', 'true')
+        localStorage.setItem('adminSecret', secret)
+        addLog('Đã kích hoạt quyền Admin')
+        alert('Kích hoạt quyền Admin thành công!')
+      } else {
+        alert('Mã Admin Secret không chính xác!')
+      }
+    } catch (e) {
+      addLog('Lỗi xác thực Admin: ' + e.message)
+      alert('Lỗi xác thực: ' + e.message)
+    }
+  }
+
+  function startEditNovel(novel) {
+    setEditingNovel(novel)
+    setEditTitle(novel.title || '')
+    setEditDesc(novel.description || '')
+    setEditContent(novel.content || '')
+    setEditCoverUrl(novel.coverUrl || '')
+  }
+
+  async function handleUpdateNovel() {
+    if (!editingNovel) return
+    if (!editTitle.trim()) {
+      alert('Tên tác phẩm không được để trống!')
+      return
+    }
+
+    addLog('Đang cập nhật truyện: ' + editTitle)
+    try {
+      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore')
+      const novelRef = doc(db, 'novels', editingNovel.id)
+
+      const payload = {
+        title: editTitle.trim(),
+        description: editDesc.trim(),
+        content: editContent,
+        coverUrl: editCoverUrl.trim(),
+        updatedAt: serverTimestamp()
+      }
+
+      await setDoc(novelRef, payload, { merge: true })
+
+      addLog('Đã cập nhật tác phẩm: ' + editTitle)
+      alert('Cập nhật tác phẩm thành công!')
+      setEditingNovel(null)
+      refreshNovels().catch(() => {})
+    } catch (err) {
+      addLog('Cập nhật thất bại: ' + (err.message || err))
+      alert('Lỗi cập nhật: ' + (err.message || err))
     }
   }
 
@@ -413,7 +497,7 @@ export default function App() {
                   <section className="continue-row">
                     {novels.slice(0, 3).map(novel => (
                       <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                        <BookCover title={novel.title || novel.id} />
+                        <BookCover title={novel.title || novel.id} coverUrl={novel.coverUrl} />
                         <div className="continue-card-body">
                           <div className="continue-title">{novel.title || novel.id}</div>
                           <div className="continue-meta">{novel.description || 'Truyện mới'}</div>
@@ -431,7 +515,7 @@ export default function App() {
                   <section className="library-line">
                     {novels.slice(0, 4).map(novel => (
                       <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                        <BookCover title={novel.title || novel.id} />
+                        <BookCover title={novel.title || novel.id} coverUrl={novel.coverUrl} />
                         <div className="continue-card-body">
                           <div className="continue-title">{novel.title || novel.id}</div>
                           <div className="continue-meta">{novel.description || 'Truyện mới'}</div>
@@ -452,7 +536,7 @@ export default function App() {
                   <div className="book-grid">
                     {novels.map(novel => (
                       <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                        <BookCover title={novel.title || novel.id} />
+                        <BookCover title={novel.title || novel.id} coverUrl={novel.coverUrl} />
                         <div className="continue-card-body">
                           <div className="continue-title">{novel.title || novel.id}</div>
                           <div className="continue-meta">{novel.description || 'Mở để đọc ngay'}</div>
@@ -472,7 +556,7 @@ export default function App() {
                     <div className="book-grid">
                       {novels.map(novel => (
                         <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                          <BookCover title={novel.title || novel.id} />
+                          <BookCover title={novel.title || novel.id} coverUrl={novel.coverUrl} />
                           <div className="continue-card-body">
                             <div className="continue-title">{novel.title || novel.id}</div>
                             <div className="continue-meta">{novel.description || 'Xem chi tiết'}</div>
@@ -488,28 +572,121 @@ export default function App() {
               {currentTab === 'creator' && (
                 <section className="tab-panel">
                   <div className="profile-card">
-                    <h2>CREATOR SPACE</h2>
-                    <p className="helper">Tính năng đăng tác phẩm dành cho tác giả.</p>
-                    <div className="control-card">
-                      <div className="form-group">
-                        <label>Tên tác phẩm mới</label>
-                        <input 
-                          type="text" 
-                          placeholder="Nhập tên truyện..." 
-                          value={newTitle}
-                          onChange={(e) => setNewTitle(e.target.value)}
-                        />
+                    <h2>CREATOR SPACE (ADMIN ONLY)</h2>
+                    
+                    {!isAdmin ? (
+                      <div className="control-card">
+                        <p className="helper" style={{ color: 'var(--danger)' }}>
+                          Chức năng này chỉ dành cho Admin. Vui lòng xác thực bằng Admin Secret để tiếp tục.
+                        </p>
+                        <div className="form-group">
+                          <label>Mã Admin Secret</label>
+                          <input 
+                            type="password" 
+                            placeholder="Nhập mã bí mật Admin..." 
+                            value={adminSecretInput}
+                            onChange={(e) => setAdminSecretInput(e.target.value)}
+                          />
+                        </div>
+                        <button className="primary" type="button" onClick={() => verifyAdminSecret(adminSecretInput)}>
+                          KÍCH HOẠT QUYỀN ADMIN
+                        </button>
                       </div>
-                      <div className="form-group">
-                        <label>Mô tả ngắn</label>
-                        <textarea 
-                          placeholder="Nhập mô tả tóm tắt truyện..."
-                          value={newDesc}
-                          onChange={(e) => setNewDesc(e.target.value)}
-                        ></textarea>
+                    ) : (
+                      <div>
+                        {editingNovel ? (
+                          <div className="control-card">
+                            <h3>CHỈNH SỬA TÁC PHẨM: {editingNovel.title || editingNovel.id}</h3>
+                            <div className="form-group">
+                              <label>Tên tác phẩm</label>
+                              <input 
+                                type="text" 
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Đường dẫn ảnh bìa (Cover URL)</label>
+                              <input 
+                                type="text" 
+                                placeholder="https://example.com/cover.jpg..."
+                                value={editCoverUrl}
+                                onChange={(e) => setEditCoverUrl(e.target.value)}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Mô tả tóm tắt</label>
+                              <textarea 
+                                value={editDesc}
+                                onChange={(e) => setEditDesc(e.target.value)}
+                              ></textarea>
+                            </div>
+                            <div className="form-group">
+                              <label>Nội dung chương truyện (Có thể nhập text thô hoặc markdown)</label>
+                              <textarea 
+                                style={{ minHeight: '240px' }}
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                              ></textarea>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              <button className="primary" type="button" onClick={handleUpdateNovel}>LƯU THAY ĐỔI</button>
+                              <button className="secondary" type="button" onClick={() => setEditingNovel(null)}>HỦY</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="control-card" style={{ marginBottom: '20px' }}>
+                              <h3>TẠO TÁC PHẨM MỚI</h3>
+                              <div className="form-group">
+                                <label>Tên tác phẩm mới</label>
+                                <input 
+                                  type="text" 
+                                  placeholder="Nhập tên truyện..." 
+                                  value={newTitle}
+                                  onChange={(e) => setNewTitle(e.target.value)}
+                                />
+                              </div>
+                              <div className="form-group">
+                                <label>Mô tả ngắn</label>
+                                <textarea 
+                                  placeholder="Nhập mô tả tóm tắt truyện..."
+                                  value={newDesc}
+                                  onChange={(e) => setNewDesc(e.target.value)}
+                                ></textarea>
+                              </div>
+                              <button className="primary" type="button" onClick={handleCreateNovel}>TẠO TRUYỆN MỚI</button>
+                            </div>
+
+                            <h3>DANH SÁCH TÁC PHẨM</h3>
+                            <p className="helper">Chọn tác phẩm để thay đổi thông tin hoặc sửa chương.</p>
+                            <div className="book-grid">
+                              {novels.map(novel => (
+                                <div key={novel.id} className="continue-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <BookCover title={novel.title || novel.id} coverUrl={novel.coverUrl} />
+                                    <div className="continue-card-body">
+                                      <div className="continue-title">{novel.title || novel.id}</div>
+                                      <div className="continue-meta" style={{ display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        {novel.description || 'Không có mô tả'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button 
+                                    className="primary" 
+                                    type="button" 
+                                    style={{ marginTop: '10px', width: '100%', minHeight: '32px' }}
+                                    onClick={() => startEditNovel(novel)}
+                                  >
+                                    Chỉnh sửa truyện
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <button className="primary" type="button" onClick={handleCreateNovel}>TẠO TRUYỆN MỚI</button>
-                    </div>
+                    )}
                   </div>
                 </section>
               )}
