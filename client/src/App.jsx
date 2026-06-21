@@ -1,8 +1,37 @@
 import React, { useEffect, useState } from 'react'
 import { db, auth } from './firebase'
-import { collection, onSnapshot, doc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
+import { collection, onSnapshot, doc, setDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore'
 import { signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
 import './styles.css'
+
+function BookCover({ title }) {
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = title.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(hash % 360);
+  const s = 65 + (hash % 15);
+  const l = 35 + (hash % 10);
+  const coverStyle = {
+    background: `linear-gradient(135deg, hsl(${h}, ${s}%, ${l}%), hsl(${(h + 40) % 360}, ${s}%, ${l - 12}%))`
+  };
+  const initials = title
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('');
+  return (
+    <div className="book-cover">
+      <div className="book-cover-spine" style={{ background: `hsl(${h}, ${s}%, ${Math.max(10, l - 15)}%)` }}></div>
+      <div className="book-cover-content" style={coverStyle}>
+        <div className="book-cover-initials">{initials || '📖'}</div>
+        <div className="book-cover-title">{title}</div>
+      </div>
+      <div className="book-cover-overlay"></div>
+    </div>
+  );
+}
 
 export default function App() {
   const [novels, setNovels] = useState([])
@@ -21,6 +50,7 @@ export default function App() {
   const [userInfo, setUserInfo] = useState(null)
   const [view, setView] = useState('home')
   const [currentTab, setCurrentTab] = useState('home')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -187,6 +217,113 @@ export default function App() {
     addLog('Đi đến bookmark trang ' + bookmark.position)
   }
 
+  // Prefetch novel documents so Firestore caches content for offline use
+  async function prefetchNovels(limit = 12) {
+    if (!novels || novels.length === 0) return
+    try {
+      const toFetch = novels.slice(0, limit)
+      for (const n of toFetch) {
+        try {
+          await getDoc(doc(db, 'novels', n.id))
+          addLog('Prefetched: ' + (n.title || n.id))
+        } catch (e) {
+          addLog('Prefetch failed: ' + (e.message || e))
+        }
+      }
+      addLog('Prefetch complete')
+    } catch (e) {
+      addLog('Prefetch error: ' + (e.message || e))
+    }
+  }
+
+  useEffect(() => {
+    if (currentTab === 'discover') {
+      prefetchNovels().catch(() => {})
+    }
+  }, [currentTab, novels])
+
+  // Trigger admin sync on server (requires ADMIN_SECRET)
+  async function adminSync() {
+    const secret = window.prompt('Nhập Admin Secret để đồng bộ server:')
+    if (!secret) return addLog('Admin sync aborted')
+    try {
+      const res = await fetch('/admin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({})
+      })
+      const data = await res.json()
+      if (res.ok) addLog('Admin sync uploaded: ' + (data.uploaded || 0))
+      else addLog('Admin sync failed: ' + (data.error || res.statusText))
+    } catch (e) {
+      addLog('Admin sync error: ' + (e.message || e))
+    }
+  }
+
+  // Creator Space: Tạo truyện mới và sync trực tiếp lên Firestore
+  const [newTitle, setNewTitle] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+
+  async function handleCreateNovel() {
+    if (!newTitle.trim()) {
+      alert('Vui lòng nhập tên tác phẩm!')
+      return
+    }
+    if (!userUid) {
+      alert('Bạn phải đăng nhập để tạo truyện!')
+      return
+    }
+    if (userInfo?.isAnonymous) {
+      alert('Tài khoản ẩn danh không có quyền upload truyện lên hệ thống. Vui lòng đăng nhập Google!')
+      return
+    }
+
+    const novelId = newTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    if (!novelId) {
+      alert('Tên tác phẩm không hợp lệ!')
+      return
+    }
+
+    addLog('Đang tạo truyện: ' + newTitle)
+    try {
+      const { runTransaction } = await import('firebase/firestore')
+      const novelRef = doc(db, 'novels', novelId)
+
+      await runTransaction(db, async (transaction) => {
+        const sfDoc = await transaction.get(novelRef)
+        const updatePayload = {
+          title: newTitle.trim(),
+          description: newDesc.trim() || 'Mô tả tóm tắt truyện',
+          content: 'Nội dung chương 1...',
+          authorUid: userUid,
+          updatedAt: serverTimestamp()
+        }
+
+        if (!sfDoc.exists()) {
+          transaction.set(novelRef, {
+            ...updatePayload,
+            createdAt: serverTimestamp()
+          })
+        } else {
+          const existingData = sfDoc.data()
+          if (existingData.authorUid && existingData.authorUid !== userUid) {
+            throw new Error('Bạn không có quyền chỉnh sửa truyện của tác giả khác!')
+          }
+          transaction.update(novelRef, updatePayload)
+        }
+      })
+
+      addLog('Đã đồng bộ lên Cloud: ' + newTitle)
+      setNewTitle('')
+      setNewDesc('')
+      alert('Đã tạo và đồng bộ tác phẩm thành công!')
+      refreshNovels().catch(() => {})
+    } catch (err) {
+      addLog('Tạo truyện thất bại: ' + (err.message || err))
+      alert('Lỗi tạo truyện: ' + (err.message || err))
+    }
+  }
+
   return (
     <div className="tablet-container">
       <div className="tablet-shell">
@@ -224,6 +361,9 @@ export default function App() {
                 </div>
               </div>
               <div className="reader-settings">
+                <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: sidebarOpen ? 'var(--line)' : '' }}>
+                  🔖 Bookmarks
+                </button>
                 <button type="button" onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}>
                   {theme === 'day' ? 'Chế độ đêm' : 'Chế độ ngày'}
                 </button>
@@ -273,7 +413,7 @@ export default function App() {
                   <section className="continue-row">
                     {novels.slice(0, 3).map(novel => (
                       <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                        <div className="cover-fallback">📚</div>
+                        <BookCover title={novel.title || novel.id} />
                         <div className="continue-card-body">
                           <div className="continue-title">{novel.title || novel.id}</div>
                           <div className="continue-meta">{novel.description || 'Truyện mới'}</div>
@@ -291,7 +431,7 @@ export default function App() {
                   <section className="library-line">
                     {novels.slice(0, 4).map(novel => (
                       <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                        <div className="cover-fallback">📚</div>
+                        <BookCover title={novel.title || novel.id} />
                         <div className="continue-card-body">
                           <div className="continue-title">{novel.title || novel.id}</div>
                           <div className="continue-meta">{novel.description || 'Truyện mới'}</div>
@@ -312,7 +452,7 @@ export default function App() {
                   <div className="book-grid">
                     {novels.map(novel => (
                       <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                        <div className="cover-fallback">📚</div>
+                        <BookCover title={novel.title || novel.id} />
                         <div className="continue-card-body">
                           <div className="continue-title">{novel.title || novel.id}</div>
                           <div className="continue-meta">{novel.description || 'Mở để đọc ngay'}</div>
@@ -332,7 +472,7 @@ export default function App() {
                     <div className="book-grid">
                       {novels.map(novel => (
                         <button key={novel.id} className="continue-card" type="button" onClick={() => openNovel(novel)}>
-                          <div className="cover-fallback">📚</div>
+                          <BookCover title={novel.title || novel.id} />
                           <div className="continue-card-body">
                             <div className="continue-title">{novel.title || novel.id}</div>
                             <div className="continue-meta">{novel.description || 'Xem chi tiết'}</div>
@@ -353,13 +493,22 @@ export default function App() {
                     <div className="control-card">
                       <div className="form-group">
                         <label>Tên tác phẩm mới</label>
-                        <input type="text" placeholder="Nhập tên truyện..." />
+                        <input 
+                          type="text" 
+                          placeholder="Nhập tên truyện..." 
+                          value={newTitle}
+                          onChange={(e) => setNewTitle(e.target.value)}
+                        />
                       </div>
                       <div className="form-group">
                         <label>Mô tả ngắn</label>
-                        <textarea placeholder="Nhập mô tả tóm tắt truyện..."></textarea>
+                        <textarea 
+                          placeholder="Nhập mô tả tóm tắt truyện..."
+                          value={newDesc}
+                          onChange={(e) => setNewDesc(e.target.value)}
+                        ></textarea>
                       </div>
-                      <button className="primary" type="button">TẠO TRUYỆN MỚI</button>
+                      <button className="primary" type="button" onClick={handleCreateNovel}>TẠO TRUYỆN MỚI</button>
                     </div>
                   </div>
                 </section>
@@ -380,7 +529,10 @@ export default function App() {
                         <span>Tài khoản</span>
                         <strong>{userInfo ? userInfo.displayName : 'Chưa đăng nhập'}</strong>
                       </div>
-                      <button className="primary" type="button" onClick={refreshNovels}>LÀM MỚI DỮ LIỆU ĐỒNG BỘ</button>
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                        <button className="primary" type="button" onClick={refreshNovels}>LÀM MỚI DỮ LIỆU ĐỒNG BỘ</button>
+                        <button className="secondary" type="button" onClick={adminSync}>KÍCH HOẠT SYNC (ADMIN)</button>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -425,7 +577,7 @@ export default function App() {
             </main>
           ) : (
             <main className="reader-panel">
-              <div className="reader-workspace">
+              <div className={`reader-workspace ${sidebarOpen ? 'sidebar-active' : ''}`}>
                 <div className="reader-content-wrap">
                   <div className="reader-content">
                     {pages.length > 0 ? (
@@ -438,7 +590,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <aside className="info-panel" style={{ display: 'flex', borderLeft: '1px solid rgba(124, 89, 52, .1)' }}>
+                <aside className="info-panel">
                   <div className="panel-box">
                     <div className="panel-title">Bookmarks</div>
                     {bookmarks.length === 0 ? (

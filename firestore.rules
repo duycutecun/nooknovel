@@ -1,9 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write for authenticated users (anonymous included)
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Rule áp dụng cho collection novels
+    match /novels/{novelId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow update, delete: if request.auth != null 
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && (resource.data.authorUid == request.auth.uid || request.auth.token.admin == true || !exists(/databases/$(database)/documents/novels/$(novelId)));
+    }
+
+    // Rule áp dụng cho các dữ liệu cá nhân của user (Vị trí đọc, bookmarks)
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

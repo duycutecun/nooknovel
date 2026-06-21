@@ -21,6 +21,32 @@ app.get('*', (req, res, next) => {
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Admin endpoint to force sync server/novels -> Firestore
+app.post('/admin/sync', async (req, res) => {
+  const provided = req.headers['x-admin-secret'] || req.body && req.body.secret;
+  if (!process.env.ADMIN_SECRET) return res.status(500).json({ error: 'ADMIN_SECRET not configured on server' });
+  if (!provided || provided !== process.env.ADMIN_SECRET) return res.status(403).json({ error: 'forbidden' });
+  if (!db) return res.status(500).json({ error: 'Firestore not initialized on server' });
+
+  try {
+    if (!fs.existsSync(novelsDir)) return res.status(400).json({ error: 'novels dir missing' });
+    const files = fs.readdirSync(novelsDir).filter(f => f.endsWith('.txt'));
+    const results = [];
+    for (const file of files) {
+      const title = path.basename(file, '.txt');
+      const full = path.join(novelsDir, file);
+      const content = fs.readFileSync(full, 'utf8');
+      await db.collection('novels').doc(title).set({ title, content, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      results.push(title);
+      broadcast({ type: 'novel-update', id: title, content });
+    }
+    return res.json({ ok: true, uploaded: results.length, titles: results });
+  } catch (e) {
+    console.warn('Admin sync failed', e);
+    return res.status(500).json({ error: e.message || '' });
+  }
+});
+
 // Firestore admin (optional)
 let admin = null;
 let db = null;
